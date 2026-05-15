@@ -1,0 +1,1 @@
+export { buildGymSlug, toE164 } from '@/utils/slug';

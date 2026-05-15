@@ -1,0 +1,1 @@
+export const EXPO_PUSH_CHANNEL = 'default';

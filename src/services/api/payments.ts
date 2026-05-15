@@ -1,0 +1,1 @@
+export { fetchPaymentsForGym, recordManualPayment } from '@/api/payments.api';
