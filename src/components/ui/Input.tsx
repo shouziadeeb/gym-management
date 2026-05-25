@@ -1,11 +1,16 @@
 import { Text, TextInput, View } from 'react-native';
 
+import { useTheme } from '@/hooks/useTheme';
+import { layout, surfaces, text } from '@/theme/classes';
+import { inputSurface, textColor } from '@/theme/styles';
+
 type Props = {
   label: string;
   value: string | undefined;
   onChangeText: (v: string) => void;
+  onBlur?: () => void;
   placeholder?: string;
-  keyboardType?: 'default' | 'phone-pad';
+  keyboardType?: 'default' | 'phone-pad' | 'number-pad';
   secureTextEntry?: boolean;
   autoCapitalize?: 'none' | 'sentences';
 };
@@ -14,20 +19,27 @@ export function Input({
   label,
   value,
   onChangeText,
+  onBlur,
   placeholder,
   keyboardType = 'default',
   secureTextEntry,
   autoCapitalize = 'none',
 }: Props) {
+  const { colors } = useTheme();
+
   return (
-    <View className="mb-4">
-      <Text className="mb-1 text-sm font-medium text-slate-600 dark:text-slate-400">{label}</Text>
+    <View className={layout.cardSpacing}>
+      <Text className={`mb-1 ${text.label}`} style={{ color: textColor(colors, 'muted') }}>
+        {label}
+      </Text>
       <TextInput
-        className="rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-base text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50"
+        className={surfaces.input}
+        style={inputSurface(colors)}
         placeholder={placeholder}
-        placeholderTextColor="#94a3b8"
+        placeholderTextColor={colors.placeholder}
         value={value ?? ''}
         onChangeText={onChangeText}
+        onBlur={onBlur}
         keyboardType={keyboardType}
         secureTextEntry={secureTextEntry}
         autoCapitalize={autoCapitalize}

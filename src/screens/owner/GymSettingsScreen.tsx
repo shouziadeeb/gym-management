@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, ScrollView, Text, View } from 'react-native';
 import { useEffect } from 'react';
 import { z } from 'zod';
 
@@ -9,12 +9,14 @@ import { queryKeys } from '@/api/queries/keys';
 import { updateGym } from '@/api/gyms.api';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { Chip } from '@/components/ui/Chip';
 import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
 import { useUserGyms } from '@/hooks/useUserGyms';
 import { getErrorMessage } from '@/lib/errors';
 import { signOut } from '@/services/auth/auth.service';
 import { useAppStore } from '@/store/app.store';
+import { layout, text } from '@/theme/classes';
 
 const schema = z.object({
   name: z.string().min(2),
@@ -68,22 +70,19 @@ export function GymSettingsScreen() {
 
   return (
     <Screen scroll>
-      <Text className="pt-6 text-2xl font-bold text-slate-900 dark:text-white">Gym settings</Text>
+      <Text className={`${layout.screenTop} ${text.screenTitleLg}`}>Gym settings</Text>
 
       {ownedGyms.length > 1 ? (
         <Card title="Active gym">
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View className="flex-row gap-2">
+            <View className={layout.row}>
               {ownedGyms.map((gym) => (
-                <Pressable
+                <Chip
                   key={gym.id}
+                  label={gym.name}
+                  active={gym.id === activeOwnerGymId}
                   onPress={() => setActiveOwnerGymId(gym.id)}
-                  className={`rounded-xl px-3 py-2 ${gym.id === activeOwnerGymId ? 'bg-emerald-600' : 'bg-slate-200 dark:bg-slate-800'}`}
-                >
-                  <Text className={gym.id === activeOwnerGymId ? 'font-semibold text-white' : 'text-slate-900 dark:text-slate-100'}>
-                    {gym.name}
-                  </Text>
-                </Pressable>
+                />
               ))}
             </View>
           </ScrollView>
@@ -109,12 +108,12 @@ export function GymSettingsScreen() {
           <Button title="Save changes" onPress={submit} loading={form.formState.isSubmitting} />
         </Card>
       ) : (
-        <Text className="text-slate-500">No gym found.</Text>
+        <Text className={text.loading}>No gym found.</Text>
       )}
 
       {memberGyms.length > 0 ? (
         <Card title="Switch view">
-          <Text className="mb-3 text-slate-600 dark:text-slate-400">Open the member experience for gyms where you train.</Text>
+          <Text className={`mb-3 ${text.caption}`}>Open the member experience for gyms where you train.</Text>
           <Button title="Go to member app" variant="ghost" onPress={() => setAppMode('member')} />
         </Card>
       ) : null}

@@ -1,32 +1,47 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import * as ImagePicker from 'expo-image-picker';
+import { router } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
-import { Text, View } from 'react-native';
-import { z } from 'zod';
+import { useState } from 'react';
+import { Alert, Text, View } from 'react-native';
 
 import { queryClient } from '@/api/queries/client';
 import { queryKeys } from '@/api/queries/keys';
 import { createGym } from '@/api/gyms.api';
 import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Chip } from '@/components/ui/Chip';
 import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
+import {
+  FACILITIES,
+  GYM_TYPES,
+  WORKING_DAYS,
+  createGymDefaultValues,
+  createGymStepFields,
+  createGymSteps,
+  createGymValidationSchema,
+  toCreateGymInput,
+  type CreateGymFormValues,
+} from '@/features/create-gym';
 import { getErrorMessage } from '@/lib/errors';
+import { useAuthIntentStore } from '@/store/auth-intent.store';
 import { useAppStore } from '@/store/app.store';
 import { useAuthStore } from '@/store/auth.store';
-
-const schema = z.object({
-  name: z.string().min(2, 'Gym name is required'),
-  description: z.string().optional(),
-});
-
-type Form = z.infer<typeof schema>;
+import { layout, text } from '@/theme/classes';
 
 export function OnboardingScreen() {
   const session = useAuthStore((state) => state.session);
+  const clearPendingIntent = useAuthIntentStore((state) => state.clearPendingIntent);
+  const setAppMode = useAppStore((state) => state.setAppMode);
   const setActiveOwnerGymId = useAppStore((state) => state.setActiveOwnerGymId);
+  const [stepIndex, setStepIndex] = useState(0);
+  const [toast, setToast] = useState<string | null>(null);
 
-  const form = useForm<Form>({
-    resolver: zodResolver(schema),
-    defaultValues: { name: '', description: '' },
+  const form = useForm<CreateGymFormValues>({
+    resolver: zodResolver(createGymValidationSchema),
+    defaultValues: createGymDefaultValues,
+    mode: 'onBlur',
   });
 
   const submit = form.handleSubmit(async (values) => {
@@ -36,54 +51,273 @@ export function OnboardingScreen() {
     }
 
     try {
-      const gym = await createGym({
-        name: values.name.trim(),
-        description: values.description?.trim(),
-      });
+      const gym = await createGym(toCreateGymInput(values));
 
+      setAppMode('owner');
       setActiveOwnerGymId(gym.id);
       await queryClient.invalidateQueries({ queryKey: queryKeys.gyms.all });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.gyms.publicList });
+      clearPendingIntent();
+      setToast('Gym created successfully');
+      Alert.alert('Success', 'Gym created successfully.');
+      router.replace('/dashboard');
     } catch (error) {
       form.setError('root', { message: getErrorMessage(error) });
     }
   });
 
+  async function pickGymLogo() {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.8,
+    });
+
+    if (result.canceled || !result.assets?.[0]?.uri) return;
+    form.setValue('gymLogoUri', result.assets[0].uri, { shouldValidate: true });
+  }
+
+  const activeStep = createGymSteps[stepIndex];
+
+  async function goNextStep() {
+    const fields = createGymStepFields[activeStep.id];
+    const valid = await form.trigger(fields as Parameters<typeof form.trigger>[0], { shouldFocus: true });
+    if (!valid) return;
+    setStepIndex((value) => Math.min(value + 1, createGymSteps.length - 1));
+  }
+
+  function goBackStep() {
+    setStepIndex((value) => Math.max(value - 1, 0));
+  }
+
+  function toggleMultiValue(field: 'workingDays' | 'facilities', value: string) {
+    const current = form.getValues(field) as string[];
+    const next = current.includes(value) ? current.filter((item) => item !== value) : [...current, value];
+    form.setValue(field, next as never, { shouldValidate: true });
+  }
+
   return (
     <Screen scroll>
-      <Text className="pt-10 text-2xl font-bold text-slate-900 dark:text-white">Create your gym</Text>
-      <Text className="mt-2 text-slate-600 dark:text-slate-400">
-        You are not linked to a gym yet. Create one to start managing members, or ask a coach for an invite after they add
-        your phone number.
+      <Text className={`${layout.screenTopLg} ${text.screenTitleLg}`}>Create your gym</Text>
+      <Text className={`${layout.stack} ${text.screenSubtitle}`}>
+        Simple onboarding to launch your gym account and start using the platform.
+      </Text>
+      <Text className={`${layout.stackSm} ${text.caption}`}>
+        Step {stepIndex + 1} of {createGymSteps.length}: {activeStep.title}
       </Text>
 
       <View className="mt-8">
-        <Controller
-          control={form.control}
-          name="name"
-          render={({ field: { onChange, value } }) => (
-            <Input label="Gym name" placeholder="Iron Temple" value={value} onChangeText={onChange} />
-          )}
-        />
-
-        <Controller
-          control={form.control}
-          name="description"
-          render={({ field: { onChange, value } }) => (
-            <Input
-              label="Description (optional)"
-              placeholder="Strength & conditioning"
-              value={value}
-              onChangeText={onChange}
-              autoCapitalize="sentences"
+        {activeStep.id === 'gymInformation' ? (
+          <Card title="Gym Information">
+            <Controller
+              control={form.control}
+              name="gymName"
+              render={({ field: { onChange, value } }) => (
+                <Input label="Gym Name" placeholder="Iron Temple" value={value} onChangeText={onChange} />
+              )}
             />
-          )}
-        />
+            {form.formState.errors.gymName?.message ? (
+              <Text className={`mb-2 ${text.error}`}>{form.formState.errors.gymName.message}</Text>
+            ) : null}
 
-        {form.formState.errors.root?.message ? (
-          <Text className="mb-2 text-sm text-red-600">{form.formState.errors.root.message}</Text>
+            <View className="mb-4">
+              <Text className={`mb-2 ${text.label}`}>Gym Logo Upload</Text>
+              <Button title={form.watch('gymLogoUri') ? 'Change Logo' : 'Upload Logo'} variant="ghost" onPress={pickGymLogo} />
+              {form.watch('gymLogoUri') ? <Text className={`${layout.stackSm} ${text.caption}`}>Logo selected</Text> : null}
+            </View>
+
+            <Controller
+              control={form.control}
+              name="gymType"
+              render={({ field: { onChange, value } }) => (
+                <Input
+                  label="Gym Type / Category"
+                  placeholder={GYM_TYPES[0]}
+                  value={value}
+                  onChangeText={onChange}
+                  autoCapitalize="sentences"
+                />
+              )}
+            />
+            <View className="mb-4 flex-row flex-wrap gap-2">
+              {GYM_TYPES.map((type) => (
+                <Chip
+                  key={type}
+                  label={type}
+                  active={form.watch('gymType') === type}
+                  onPress={() => form.setValue('gymType', type, { shouldValidate: true })}
+                />
+              ))}
+            </View>
+            {form.formState.errors.gymType?.message ? (
+              <Text className={`mb-2 ${text.error}`}>{form.formState.errors.gymType.message}</Text>
+            ) : null}
+
+            <Controller
+              control={form.control}
+              name="gymDescription"
+              render={({ field: { onChange, value } }) => (
+                <Input
+                  label="Gym Description"
+                  placeholder="Briefly describe your gym and training style"
+                  value={value}
+                  onChangeText={onChange}
+                  autoCapitalize="sentences"
+                />
+              )}
+            />
+            {form.formState.errors.gymDescription?.message ? (
+              <Text className={`mb-2 ${text.error}`}>{form.formState.errors.gymDescription.message}</Text>
+            ) : null}
+          </Card>
         ) : null}
 
-        <Button title="Create gym" onPress={submit} loading={form.formState.isSubmitting} />
+        {activeStep.id === 'ownerInformation' ? (
+          <Card title="Owner Information">
+            <Controller
+              control={form.control}
+              name="ownerName"
+              render={({ field: { onChange, value } }) => (
+                <Input label="Owner Name" placeholder="John Doe" value={value} onChangeText={onChange} autoCapitalize="sentences" />
+              )}
+            />
+            {form.formState.errors.ownerName?.message ? (
+              <Text className={`mb-2 ${text.error}`}>{form.formState.errors.ownerName.message}</Text>
+            ) : null}
+
+            <Controller
+              control={form.control}
+              name="ownerEmail"
+              render={({ field: { onChange, value } }) => (
+                <Input label="Email" placeholder="owner@gym.com" value={value} onChangeText={onChange} autoCapitalize="none" />
+              )}
+            />
+            {form.formState.errors.ownerEmail?.message ? (
+              <Text className={`mb-2 ${text.error}`}>{form.formState.errors.ownerEmail.message}</Text>
+            ) : null}
+
+            <Controller
+              control={form.control}
+              name="ownerPhone"
+              render={({ field: { onChange, value } }) => (
+                <Input label="Phone Number" placeholder="+919876543210" value={value} onChangeText={onChange} keyboardType="phone-pad" />
+              )}
+            />
+            {form.formState.errors.ownerPhone?.message ? (
+              <Text className={`mb-2 ${text.error}`}>{form.formState.errors.ownerPhone.message}</Text>
+            ) : null}
+
+            <Controller
+              control={form.control}
+              name="password"
+              render={({ field: { onChange, value } }) => (
+                <Input label="Password" placeholder="******" value={value} onChangeText={onChange} secureTextEntry />
+              )}
+            />
+            {form.formState.errors.password?.message ? (
+              <Text className={`mb-2 ${text.error}`}>{form.formState.errors.password.message}</Text>
+            ) : null}
+
+            <Controller
+              control={form.control}
+              name="confirmPassword"
+              render={({ field: { onChange, value } }) => (
+                <Input label="Confirm Password" placeholder="******" value={value} onChangeText={onChange} secureTextEntry />
+              )}
+            />
+            {form.formState.errors.confirmPassword?.message ? (
+              <Text className={`mb-2 ${text.error}`}>{form.formState.errors.confirmPassword.message}</Text>
+            ) : null}
+          </Card>
+        ) : null}
+
+        {activeStep.id === 'gymAddress' ? (
+          <Card title="Gym Address">
+            <Controller control={form.control} name="country" render={({ field: { onChange, value } }) => <Input label="Country" placeholder="India" value={value} onChangeText={onChange} autoCapitalize="sentences" />} />
+            {form.formState.errors.country?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.country.message}</Text> : null}
+            <Controller control={form.control} name="state" render={({ field: { onChange, value } }) => <Input label="State" placeholder="Maharashtra" value={value} onChangeText={onChange} autoCapitalize="sentences" />} />
+            {form.formState.errors.state?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.state.message}</Text> : null}
+            <Controller control={form.control} name="city" render={({ field: { onChange, value } }) => <Input label="City" placeholder="Pune" value={value} onChangeText={onChange} autoCapitalize="sentences" />} />
+            {form.formState.errors.city?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.city.message}</Text> : null}
+            <Controller control={form.control} name="fullAddress" render={({ field: { onChange, value } }) => <Input label="Full Address" placeholder="Street, Area" value={value} onChangeText={onChange} autoCapitalize="sentences" />} />
+            {form.formState.errors.fullAddress?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.fullAddress.message}</Text> : null}
+            <Controller control={form.control} name="pincode" render={({ field: { onChange, value } }) => <Input label="Pincode" placeholder="411001" value={value} onChangeText={onChange} keyboardType="number-pad" />} />
+            {form.formState.errors.pincode?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.pincode.message}</Text> : null}
+          </Card>
+        ) : null}
+
+        {activeStep.id === 'gymTiming' ? (
+          <Card title="Gym Timing">
+            <Controller control={form.control} name="openingTime" render={({ field: { onChange, value } }) => <Input label="Opening Time" placeholder="06:00" value={value} onChangeText={onChange} />} />
+            {form.formState.errors.openingTime?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.openingTime.message}</Text> : null}
+            <Controller control={form.control} name="closingTime" render={({ field: { onChange, value } }) => <Input label="Closing Time" placeholder="22:00" value={value} onChangeText={onChange} />} />
+            {form.formState.errors.closingTime?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.closingTime.message}</Text> : null}
+            <Text className={`mb-2 ${text.label}`}>Working Days</Text>
+            <View className="mb-4 flex-row flex-wrap gap-2">
+              {WORKING_DAYS.map((day) => (
+                <Chip
+                  key={day}
+                  label={day.slice(0, 3)}
+                  active={form.watch('workingDays').includes(day)}
+                  onPress={() => toggleMultiValue('workingDays', day)}
+                />
+              ))}
+            </View>
+            {form.formState.errors.workingDays?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.workingDays.message}</Text> : null}
+          </Card>
+        ) : null}
+
+        {activeStep.id === 'membershipSetup' ? (
+          <Card title="Membership Setup">
+            <Controller control={form.control} name="monthlyFee" render={({ field: { onChange, value } }) => <Input label="Monthly Fee" placeholder="2500" value={value} onChangeText={onChange} keyboardType="number-pad" />} />
+            {form.formState.errors.monthlyFee?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.monthlyFee.message}</Text> : null}
+            <Controller control={form.control} name="quarterlyFee" render={({ field: { onChange, value } }) => <Input label="Quarterly Fee" placeholder="6500" value={value} onChangeText={onChange} keyboardType="number-pad" />} />
+            {form.formState.errors.quarterlyFee?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.quarterlyFee.message}</Text> : null}
+            <Controller control={form.control} name="yearlyFee" render={({ field: { onChange, value } }) => <Input label="Yearly Fee" placeholder="22000" value={value} onChangeText={onChange} keyboardType="number-pad" />} />
+            {form.formState.errors.yearlyFee?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.yearlyFee.message}</Text> : null}
+          </Card>
+        ) : null}
+
+        {activeStep.id === 'facilities' ? (
+          <Card title="Facilities">
+            <Text className={`mb-2 ${text.label}`}>Select amenities</Text>
+            <View className="mb-4 flex-row flex-wrap gap-2">
+              {FACILITIES.map((facility) => (
+                <Chip
+                  key={facility}
+                  label={facility}
+                  active={form.watch('facilities').includes(facility)}
+                  onPress={() => toggleMultiValue('facilities', facility)}
+                />
+              ))}
+            </View>
+            {form.formState.errors.facilities?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.facilities.message}</Text> : null}
+          </Card>
+        ) : null}
+
+        {form.formState.errors.root?.message ? (
+          <Text className={`mb-2 ${text.error}`}>{form.formState.errors.root.message}</Text>
+        ) : null}
+
+        {toast ? <Text className={`mb-2 ${text.link}`}>{toast}</Text> : null}
+
+        <View className="flex-row gap-2">
+          {stepIndex > 0 ? (
+            <View className="flex-1">
+              <Button title="Back" variant="ghost" onPress={goBackStep} />
+            </View>
+          ) : null}
+
+          {stepIndex < createGymSteps.length - 1 ? (
+            <View className="flex-1">
+              <Button title="Next" onPress={goNextStep} />
+            </View>
+          ) : (
+            <View className="flex-1">
+              <Button title="Create gym" onPress={submit} loading={form.formState.isSubmitting} />
+            </View>
+          )}
+        </View>
       </View>
     </Screen>
   );

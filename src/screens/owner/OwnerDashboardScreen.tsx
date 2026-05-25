@@ -1,6 +1,6 @@
 import { format, parseISO, startOfMonth } from 'date-fns';
 import { useMemo } from 'react';
-import { Dimensions, Text, View, useColorScheme } from 'react-native';
+import { Dimensions, Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart } from 'react-native-gifted-charts';
 
@@ -9,10 +9,12 @@ import { queryKeys } from '@/api/queries/keys';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { DATE_FORMAT } from '@/constants/date';
+import { useTheme } from '@/hooks/useTheme';
 import { useAppStore } from '@/store/app.store';
+import { layout, text } from '@/theme/classes';
 
 export function OwnerDashboardScreen() {
-  const scheme = useColorScheme();
+  const { colors } = useTheme();
   const activeOwnerGymId = useAppStore((state) => state.activeOwnerGymId);
 
   const paymentsQuery = useQuery({
@@ -46,28 +48,28 @@ export function OwnerDashboardScreen() {
   if (!activeOwnerGymId) {
     return (
       <Screen>
-        <Text className="pt-8 text-slate-600 dark:text-slate-400">Select a gym in settings.</Text>
+        <Text className={`${layout.screenTopMd} ${text.caption}`}>Select a gym in settings.</Text>
       </Screen>
     );
   }
 
   return (
     <Screen scroll>
-      <Text className="pt-6 text-2xl font-bold text-slate-900 dark:text-white">Dashboard</Text>
-      <Text className="text-slate-600 dark:text-slate-400">Revenue overview & health</Text>
+      <Text className={`${layout.screenTop} ${text.screenTitleLg}`}>Dashboard</Text>
+      <Text className={text.caption}>Revenue overview & health</Text>
 
       <Card title="Total recorded revenue">
-        <Text className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+        <Text className={text.revenue}>
           ${(totalCents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </Text>
-        <Text className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <Text className={`${layout.stackSm} ${text.caption}`}>
           From manual entries & integrations. Connect Stripe in a later phase.
         </Text>
       </Card>
 
       <Card title="Last 6 months">
         {chartData.length === 0 ? (
-          <Text className="text-slate-500 dark:text-slate-400">No payments yet. Log revenue from the Members tab.</Text>
+          <Text className={text.caption}>No payments yet. Log revenue from the Members tab.</Text>
         ) : (
           <View className="items-center overflow-hidden">
             <BarChart
@@ -79,20 +81,20 @@ export function OwnerDashboardScreen() {
               hideRules
               xAxisThickness={0}
               yAxisThickness={0}
-              yAxisTextStyle={{ color: scheme === 'dark' ? '#94a3b8' : '#64748b' }}
-              xAxisLabelTextStyle={{ color: scheme === 'dark' ? '#94a3b8' : '#64748b' }}
+              yAxisTextStyle={{ color: colors.chartAxis }}
+              xAxisLabelTextStyle={{ color: colors.chartAxis }}
               noOfSections={4}
               maxValue={Math.max(...chartData.map((bar) => bar.value), 1) * 1.2}
               width={chartWidth}
               height={200}
-              frontColor="#16a34a"
+              frontColor={colors.primary}
             />
           </View>
         )}
       </Card>
 
       <Card title="Memberships pipeline">
-        <Text className="text-slate-600 dark:text-slate-300">
+        <Text className={text.bodySm}>
           Track upcoming expirations under Members. Automated reminders run via Supabase Edge Functions + Expo push.
         </Text>
       </Card>

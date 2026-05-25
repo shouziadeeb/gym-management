@@ -6,6 +6,12 @@ export type Profile = {
   id: string;
   phone: string | null;
   full_name: string | null;
+  gender: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null;
+  age: number | null;
+  date_of_birth: string | null;
+  fitness_goal: string | null;
+  city: string | null;
+  onboarding_completed: boolean;
   role: UserRole;
   created_at: string;
   updated_at: string;
@@ -23,6 +29,26 @@ export type Gym = {
   settings: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+};
+
+export type GymSettings = {
+  gymType?: string | null;
+  timings?: {
+    openingTime?: string | null;
+    closingTime?: string | null;
+    workingDays?: string[] | null;
+  } | null;
+  facilities?: string[] | null;
+  ownerProfile?: {
+    name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+  } | null;
+  membershipPlans?: {
+    monthlyFeeCents?: number | null;
+    quarterlyFeeCents?: number | null;
+    yearlyFeeCents?: number | null;
+  } | null;
 };
 
 export type GymMembership = {

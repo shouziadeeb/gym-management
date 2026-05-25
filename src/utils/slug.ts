@@ -11,7 +11,4 @@ export function buildGymSlug(gymName: string): string {
   return base ? `${base}-${suffix}` : `gym-${suffix}`;
 }
 
-export function toE164(raw: string): string {
-  const cleaned = raw.trim().replace(/[^\\d+]/g, '');
-  return cleaned.startsWith('+') ? cleaned : `+${cleaned}`;
-}
+export { toE164, isValidE164 } from '@/utils/phone';

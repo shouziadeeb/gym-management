@@ -5,6 +5,10 @@ type RequiredEnv = {
   EXPO_PUBLIC_SUPABASE_ANON_KEY: string;
 };
 
+type OptionalEnv = {
+  EXPO_PUBLIC_ENABLE_DEV_AUTH: string;
+};
+
 function readEnv(): RequiredEnv {
   const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim() ?? '';
   const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? '';
@@ -16,6 +20,13 @@ function readEnv(): RequiredEnv {
 }
 
 export const env = readEnv();
+export const optionalEnv: OptionalEnv = {
+  EXPO_PUBLIC_ENABLE_DEV_AUTH: process.env.EXPO_PUBLIC_ENABLE_DEV_AUTH?.trim() ?? '',
+};
+
+export function isDevAuthEnabled(): boolean {
+  return __DEV__ && optionalEnv.EXPO_PUBLIC_ENABLE_DEV_AUTH.toLowerCase() === 'true';
+}
 
 export function assertRequiredEnv(): void {
   const missing = Object.entries(env)

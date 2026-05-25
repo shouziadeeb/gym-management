@@ -17,9 +17,12 @@ import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
 import { DATE_FORMAT } from '@/constants/date';
 import { getErrorMessage } from '@/lib/errors';
+import { useTheme } from '@/hooks/useTheme';
 import { useAppStore } from '@/store/app.store';
 import { useAuthStore } from '@/store/auth.store';
-import { toE164 } from '@/utils/slug';
+import { toE164 } from '@/utils/phone';
+import { layout, surfaces, text } from '@/theme/classes';
+import { cardSurface, inputSurface, modalOverlay } from '@/theme/styles';
 
 const phoneSchema = z.object({
   phone: z.string().min(8, 'Phone required'),
@@ -28,6 +31,7 @@ const phoneSchema = z.object({
 type PhoneForm = z.infer<typeof phoneSchema>;
 
 export function MembersScreen() {
+  const { colors } = useTheme();
   const activeOwnerGymId = useAppStore((state) => state.activeOwnerGymId);
   const ownerId = useAuthStore((state) => state.session?.user.id);
 
@@ -112,15 +116,15 @@ export function MembersScreen() {
   if (!activeOwnerGymId) {
     return (
       <Screen>
-        <Text className="pt-8 text-slate-600 dark:text-slate-400">No gym selected.</Text>
+        <Text className={`${layout.screenTopMd} ${text.caption}`}>No gym selected.</Text>
       </Screen>
     );
   }
 
   return (
     <Screen scroll>
-      <Text className="pt-6 text-2xl font-bold text-slate-900 dark:text-white">Members</Text>
-      <Text className="text-slate-600 dark:text-slate-400">Invite by phone (user must sign up first)</Text>
+      <Text className={`${layout.screenTop} ${text.screenTitleLg}`}>Members</Text>
+      <Text className={text.caption}>Invite by phone (user must sign up first)</Text>
 
       <Card title="Add member">
         <Controller
@@ -146,30 +150,28 @@ export function MembersScreen() {
         />
 
         <Button title="Add to gym" onPress={submit} loading={form.formState.isSubmitting} />
-        {feedback ? <Text className="mt-3 text-sm text-slate-700 dark:text-slate-300">{feedback}</Text> : null}
+        {feedback ? <Text className={`${layout.stackMd} ${text.bodySm}`}>{feedback}</Text> : null}
       </Card>
 
-      <Text className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">Directory</Text>
-      {membersQuery.isLoading ? <Text className="text-slate-500">Loading…</Text> : null}
+      <Text className={`mb-2 ${text.listTitle}`}>Directory</Text>
+      {membersQuery.isLoading ? <Text className={text.loading}>Loadingâ€¦</Text> : null}
 
       {sortedRows.map((row) => (
         <Card key={row.membership.id} className="!mb-3">
-          <View className="flex-row items-start justify-between">
-            <View className="flex-1 pr-2">
-              <Text className="text-lg font-semibold text-slate-900 dark:text-white">
-                {row.profile?.full_name || 'Member'}
-              </Text>
-              <Text className="text-slate-600 dark:text-slate-400">{row.profile?.phone}</Text>
+          <View className={layout.rowBetween}>
+            <View className={`${layout.flex1} pr-2`}>
+              <Text className={text.listTitle}>{row.profile?.full_name || 'Member'}</Text>
+              <Text className={text.caption}>{row.profile?.phone}</Text>
 
               {row.subscription ? (
-                <View className="mt-2">
+                <View className={layout.stack}>
                   <MembershipStatusBadge status={row.subscription.status} endsAt={row.subscription.ends_at} />
-                  <Text className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                  <Text className={`${layout.stack} ${text.caption}`}>
                     Renews {format(parseISO(row.subscription.ends_at), DATE_FORMAT.short)}
                   </Text>
                 </View>
               ) : (
-                <Text className="mt-2 text-amber-700 dark:text-amber-300">No subscription row yet</Text>
+                <Text className={`${layout.stack} ${text.warningBody}`}>No subscription row yet</Text>
               )}
             </View>
 
@@ -210,23 +212,27 @@ export function MembersScreen() {
       ))}
 
       <Modal visible={!!payTarget} transparent animationType="fade">
-        <View className="flex-1 items-center justify-center bg-black/50 px-4">
-          <View className="w-full max-w-sm rounded-2xl bg-white p-4 dark:bg-slate-900">
-            <Text className="text-lg font-semibold text-slate-900 dark:text-white">Record payment</Text>
-            <Text className="mt-1 text-sm text-slate-600 dark:text-slate-400">Amount (USD)</Text>
+        <View className={surfaces.modalOverlay} style={modalOverlay(colors)}>
+          <View className={surfaces.modalPanel} style={cardSurface(colors, true)}>
+            <Text className={text.cardTitle} style={{ color: colors.foreground }}>
+              Record payment
+            </Text>
+            <Text className={`${layout.stackSm} ${text.caption}`}>Amount (USD)</Text>
 
             <TextInput
-              className="mt-2 rounded-xl border border-slate-200 px-3 py-3 text-base text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+              className={`${layout.stack} ${surfaces.inputCompact}`}
+              style={inputSurface(colors)}
               keyboardType="decimal-pad"
               value={payAmount}
               onChangeText={setPayAmount}
+              placeholderTextColor={colors.placeholder}
             />
 
-            <View className="mt-4 flex-row gap-2">
-              <View className="flex-1">
+            <View className={`${layout.stackLg} ${layout.row}`}>
+              <View className={layout.flex1}>
                 <Button title="Cancel" variant="ghost" onPress={() => setPayTarget(null)} />
               </View>
-              <View className="flex-1">
+              <View className={layout.flex1}>
                 <Button title="Save" onPress={submitPayment} />
               </View>
             </View>

@@ -1,18 +1,32 @@
 import { ReactNode } from 'react';
-import { Text, View } from 'react-native';
+import { Text, View, type ViewStyle } from 'react-native';
+
+import { useTheme } from '@/hooks/useTheme';
+import { surfaces, text } from '@/theme/classes';
+import { cardSurface, highlightBorder } from '@/theme/styles';
 
 type Props = {
   title?: string;
   children: ReactNode;
   className?: string;
+  highlighted?: boolean;
 };
 
-export function Card({ title, children, className }: Props) {
+export function Card({ title, children, className, highlighted }: Props) {
+  const { colors } = useTheme();
+
+  const surfaceStyle: ViewStyle = {
+    ...cardSurface(colors),
+    ...(highlighted ? highlightBorder(colors) : null),
+  };
+
   return (
-    <View
-      className={`mb-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 ${className ?? ''}`}
-    >
-      {title ? <Text className="mb-2 text-lg font-semibold text-slate-900 dark:text-slate-50">{title}</Text> : null}
+    <View className={`${surfaces.card} ${className ?? ''}`} style={surfaceStyle}>
+      {title ? (
+        <Text className={`mb-2 ${text.cardTitle}`} style={{ color: colors.foreground }}>
+          {title}
+        </Text>
+      ) : null}
       {children}
     </View>
   );

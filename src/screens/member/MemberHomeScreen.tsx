@@ -12,6 +12,7 @@ import { useUserGyms } from '@/hooks/useUserGyms';
 import { useAppStore } from '@/store/app.store';
 import { useAuthStore } from '@/store/auth.store';
 import { daysUntil } from '@/utils/membership';
+import { layout, text } from '@/theme/classes';
 
 export function MemberHomeScreen() {
   const userId = useAuthStore((state) => state.session?.user.id);
@@ -30,29 +31,29 @@ export function MemberHomeScreen() {
 
   return (
     <Screen scroll>
-      <Text className="pt-6 text-2xl font-bold text-slate-900 dark:text-white">My membership</Text>
-      {gym ? <Text className="text-slate-600 dark:text-slate-400">{gym.name}</Text> : null}
+      <Text className={`${layout.screenTop} ${text.screenTitleLg}`}>My membership</Text>
+      {gym ? <Text className={text.caption}>{gym.name}</Text> : null}
 
-      {membershipQuery.isLoading ? <Text className="mt-4 text-slate-500">Loading…</Text> : null}
+      {membershipQuery.isLoading ? <Text className={`${layout.stackLg} ${text.loading}`}>Loadingï¿½</Text> : null}
 
       {membership ? (
         <Card title="Status">
           <MembershipStatusBadge status={membership.status} endsAt={membership.ends_at} />
-          <Text className="mt-4 text-lg text-slate-900 dark:text-white">
+          <Text className={`${layout.stackLg} ${text.listTitle}`}>
             {daysUntil(membership.ends_at) < 0
-              ? 'Expired — renew with your gym'
+              ? 'Expired ï¿½ renew with your gym'
               : `${daysUntil(membership.ends_at)} days left`}
           </Text>
-          <Text className="mt-1 text-slate-600 dark:text-slate-400">
+          <Text className={`${layout.stackSm} ${text.caption}`}>
             Valid through {format(parseISO(membership.ends_at), DATE_FORMAT.long)}
           </Text>
-          <Text className="mt-4 text-sm text-slate-500 dark:text-slate-400">
+          <Text className={`${layout.stackLg} ${text.caption}`}>
             Renewal reminders are sent 3 days before expiry via push notifications once your gym enables automations.
           </Text>
         </Card>
       ) : !membershipQuery.isLoading ? (
         <Card title="No active record">
-          <Text className="text-slate-600 dark:text-slate-400">
+          <Text className={text.caption}>
             Ask your gym owner to connect your profile or refresh your membership.
           </Text>
         </Card>

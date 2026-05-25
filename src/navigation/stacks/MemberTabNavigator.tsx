@@ -3,6 +3,7 @@ import { Text } from 'react-native';
 
 import { MemberHomeScreen } from '@/screens/member/MemberHomeScreen';
 import { MemberProfileScreen } from '@/screens/member/MemberProfileScreen';
+import { createStackTabBarOptions } from '@/theme/navigation';
 
 export type MemberTabParamList = {
   Membership: undefined;
@@ -13,15 +14,7 @@ const Tab = createBottomTabNavigator<MemberTabParamList>();
 
 export function MemberTabNavigator() {
   return (
-    <Tab.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: '#0f172a' },
-        headerTintColor: '#f8fafc',
-        tabBarStyle: { backgroundColor: '#0f172a', borderTopColor: '#1e293b' },
-        tabBarActiveTintColor: '#34d399',
-        tabBarInactiveTintColor: '#94a3b8',
-      }}
-    >
+    <Tab.Navigator screenOptions={createStackTabBarOptions()}>
       <Tab.Screen
         name="Membership"
         component={MemberHomeScreen}

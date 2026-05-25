@@ -1,9 +1,10 @@
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, ScrollView, Text, View } from 'react-native';
 
 import { queryKeys } from '@/api/queries/keys';
 import { removeMemberFromGym } from '@/api/members.api';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { Chip } from '@/components/ui/Chip';
 import { Screen } from '@/components/ui/Screen';
 import { getErrorMessage } from '@/lib/errors';
 import { queryClient } from '@/api/queries/client';
@@ -11,6 +12,7 @@ import { signOut } from '@/services/auth/auth.service';
 import { useUserGyms } from '@/hooks/useUserGyms';
 import { useAppStore } from '@/store/app.store';
 import { useAuthStore } from '@/store/auth.store';
+import { layout, text } from '@/theme/classes';
 
 export function MemberProfileScreen() {
   const userId = useAuthStore((state) => state.session?.user.id);
@@ -40,26 +42,19 @@ export function MemberProfileScreen() {
 
   return (
     <Screen scroll>
-      <Text className="pt-6 text-2xl font-bold text-slate-900 dark:text-white">Profile</Text>
+      <Text className={`${layout.screenTop} ${text.screenTitleLg}`}>Profile</Text>
 
       {memberGyms.length > 1 ? (
         <Card title="Training at">
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View className="flex-row gap-2">
+            <View className={layout.row}>
               {memberGyms.map((gym) => (
-                <Pressable
+                <Chip
                   key={gym.id}
+                  label={gym.name}
+                  active={gym.id === activeMemberGymId}
                   onPress={() => setActiveMemberGymId(gym.id)}
-                  className={`rounded-xl px-3 py-2 ${gym.id === activeMemberGymId ? 'bg-emerald-600' : 'bg-slate-200 dark:bg-slate-800'}`}
-                >
-                  <Text
-                    className={
-                      gym.id === activeMemberGymId ? 'font-semibold text-white' : 'text-slate-900 dark:text-slate-100'
-                    }
-                  >
-                    {gym.name}
-                  </Text>
-                </Pressable>
+                />
               ))}
             </View>
           </ScrollView>
@@ -83,7 +78,7 @@ export function MemberProfileScreen() {
 
       {ownedGyms.length > 0 ? (
         <Card title="Switch view">
-          <Text className="mb-3 text-slate-600 dark:text-slate-400">Manage the gyms you own.</Text>
+          <Text className={`mb-3 ${text.caption}`}>Manage the gyms you own.</Text>
           <Button title="Open owner dashboard" variant="ghost" onPress={() => setAppMode('owner')} />
         </Card>
       ) : null}

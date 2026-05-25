@@ -1,3 +1,5 @@
+/// <reference types="expo-router/types" />
+
 declare namespace NodeJS {
   interface ProcessEnv {
     EXPO_PUBLIC_SUPABASE_URL: string;

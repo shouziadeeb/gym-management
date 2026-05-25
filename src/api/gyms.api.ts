@@ -15,6 +15,18 @@ export async function fetchOwnedGyms(ownerId: string): Promise<Gym[]> {
   return (data ?? []) as Gym[];
 }
 
+export async function fetchPublicGyms(): Promise<Gym[]> {
+  const { data, error } = await supabase.from('gyms').select('*').order('created_at', { ascending: false }).limit(50);
+  if (error) throw error;
+  return (data ?? []) as Gym[];
+}
+
+export async function fetchGymById(gymId: string): Promise<Gym | null> {
+  const { data, error } = await supabase.from('gyms').select('*').eq('id', gymId).maybeSingle();
+  if (error) throw error;
+  return (data as Gym | null) ?? null;
+}
+
 export async function fetchMemberGyms(userId: string): Promise<Gym[]> {
   const { data, error } = await supabase
     .from('gym_memberships')
@@ -43,6 +55,31 @@ export async function fetchMemberGyms(userId: string): Promise<Gym[]> {
 export type CreateGymInput = {
   name: string;
   description?: string;
+  logoUrl?: string;
+  gymType?: string;
+  address?: {
+    country: string;
+    state: string;
+    city: string;
+    fullAddress: string;
+    pincode: string;
+  };
+  timings?: {
+    openingTime: string;
+    closingTime: string;
+    workingDays: string[];
+  };
+  membershipPlans?: {
+    monthlyFeeCents: number;
+    quarterlyFeeCents: number;
+    yearlyFeeCents: number;
+  };
+  facilities?: string[];
+  ownerProfile?: {
+    name: string;
+    email: string;
+    phone: string;
+  };
 };
 
 export async function createGym(input: CreateGymInput): Promise<Gym> {
@@ -67,7 +104,18 @@ export async function createGym(input: CreateGymInput): Promise<Gym> {
       owner_id: user.id,
       name,
       description: input.description?.trim() || null,
+      logo_url: input.logoUrl?.trim() || null,
+      address: input.address
+        ? `${input.address.fullAddress}, ${input.address.city}, ${input.address.state}, ${input.address.country} - ${input.address.pincode}`
+        : null,
       slug: buildGymSlug(name),
+      settings: {
+        gymType: input.gymType ?? null,
+        timings: input.timings ?? null,
+        membershipPlans: input.membershipPlans ?? null,
+        facilities: input.facilities ?? [],
+        ownerProfile: input.ownerProfile ?? null,
+      },
     };
 
     logger.info('createGym payload', { userId: user.id, payload, attempt });
@@ -97,6 +145,60 @@ export async function createGym(input: CreateGymInput): Promise<Gym> {
 
 export async function updateGym(gymId: string, patch: Partial<Pick<Gym, 'name' | 'description' | 'address'>>) {
   const { data, error } = await supabase.from('gyms').update(patch).eq('id', gymId).select('*').single();
+  if (error) throw error;
+  return data as Gym;
+}
+
+export type UpdateGymProfileInput = {
+  name: string;
+  description?: string;
+  address?: {
+    country: string;
+    state: string;
+    city: string;
+    fullAddress: string;
+    pincode: string;
+  };
+  gymType?: string;
+  timings?: {
+    openingTime: string;
+    closingTime: string;
+    workingDays: string[];
+  };
+  membershipPlans?: {
+    monthlyFeeCents: number;
+    quarterlyFeeCents: number;
+    yearlyFeeCents: number;
+  };
+  facilities?: string[];
+};
+
+export async function updateGymProfile(gymId: string, input: UpdateGymProfileInput): Promise<Gym> {
+  const { data: current, error: fetchError } = await supabase.from('gyms').select('*').eq('id', gymId).single();
+  if (fetchError) throw fetchError;
+
+  const currentGym = current as Gym;
+  const currentSettings = (currentGym.settings ?? {}) as Record<string, unknown>;
+  const nextSettings = {
+    ...currentSettings,
+    gymType: input.gymType ?? null,
+    timings: input.timings ?? null,
+    membershipPlans: input.membershipPlans ?? null,
+    facilities: input.facilities ?? [],
+  };
+
+  const addressText = input.address
+    ? `${input.address.fullAddress}, ${input.address.city}, ${input.address.state}, ${input.address.country} - ${input.address.pincode}`
+    : currentGym.address;
+
+  const payload = {
+    name: input.name.trim(),
+    description: input.description?.trim() || null,
+    address: addressText,
+    settings: nextSettings,
+  };
+
+  const { data, error } = await supabase.from('gyms').update(payload).eq('id', gymId).select('*').single();
   if (error) throw error;
   return data as Gym;
 }
