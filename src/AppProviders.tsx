@@ -24,8 +24,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
       setFlag?: (name: string, value: string) => void;
     };
     nativewindStyleSheet.setFlag?.('darkMode', 'class');
-    nativewindColorScheme.set(preference === 'system' ? 'system' : colorScheme);
-  }, [colorScheme, preference]);
+    // Apply resolved scheme so dark: classes always match runtime colors.
+    nativewindColorScheme.set(colorScheme);
+  }, [colorScheme]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>

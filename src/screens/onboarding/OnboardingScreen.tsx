@@ -13,6 +13,7 @@ import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
+import { useImageDeletion, useImageUpload } from '@/hooks';
 import {
   FACILITIES,
   GYM_TYPES,
@@ -37,6 +38,8 @@ export function OnboardingScreen() {
   const setActiveOwnerGymId = useAppStore((state) => state.setActiveOwnerGymId);
   const [stepIndex, setStepIndex] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
+  const { upload, isUploading, error: uploadError, resetError: clearUploadError } = useImageUpload();
+  const { remove } = useImageDeletion();
 
   const form = useForm<CreateGymFormValues>({
     resolver: zodResolver(createGymValidationSchema),
@@ -50,8 +53,29 @@ export function OnboardingScreen() {
       return;
     }
 
+    let uploadedLogoPath: string | undefined;
+
     try {
-      const gym = await createGym(toCreateGymInput(values));
+      const payload = toCreateGymInput(values);
+      if (values.gymLogoUri?.trim()) {
+        clearUploadError();
+        const uploaded = await upload(
+          {
+            uri: values.gymLogoUri.trim(),
+            fileName: `${values.gymName || 'gym'}-logo.jpg`,
+          },
+          'gyms',
+        );
+        if (!uploaded) {
+          form.setError('root', { message: uploadError ?? 'Logo upload failed. Please retry.' });
+          return;
+        }
+
+        payload.logoUrl = uploaded.publicUrl;
+        uploadedLogoPath = uploaded.path;
+      }
+
+      const gym = await createGym(payload);
 
       setAppMode('owner');
       setActiveOwnerGymId(gym.id);
@@ -62,6 +86,9 @@ export function OnboardingScreen() {
       Alert.alert('Success', 'Gym created successfully.');
       router.replace('/dashboard');
     } catch (error) {
+      if (uploadedLogoPath) {
+        void remove(uploadedLogoPath);
+      }
       form.setError('root', { message: getErrorMessage(error) });
     }
   });
@@ -74,10 +101,12 @@ export function OnboardingScreen() {
     });
 
     if (result.canceled || !result.assets?.[0]?.uri) return;
+    clearUploadError();
     form.setValue('gymLogoUri', result.assets[0].uri, { shouldValidate: true });
   }
 
   const activeStep = createGymSteps[stepIndex];
+  const selectedGymLogo = form.watch('gymLogoUri');
 
   async function goNextStep() {
     const fields = createGymStepFields[activeStep.id];
@@ -122,8 +151,18 @@ export function OnboardingScreen() {
 
             <View className="mb-4">
               <Text className={`mb-2 ${text.label}`}>Gym Logo Upload</Text>
-              <Button title={form.watch('gymLogoUri') ? 'Change Logo' : 'Upload Logo'} variant="ghost" onPress={pickGymLogo} />
-              {form.watch('gymLogoUri') ? <Text className={`${layout.stackSm} ${text.caption}`}>Logo selected</Text> : null}
+              <Button
+                title={selectedGymLogo ? 'Change Logo' : 'Upload Logo'}
+                variant="ghost"
+                onPress={pickGymLogo}
+                disabled={isUploading || form.formState.isSubmitting}
+              />
+              {selectedGymLogo ? (
+                <Text className={`${layout.stackSm} ${text.caption}`}>
+                  {selectedGymLogo.startsWith('http') ? 'Logo ready for publish' : 'Logo selected'}
+                </Text>
+              ) : null}
+              {uploadError ? <Text className={`${layout.stackSm} ${text.error}`}>{uploadError}</Text> : null}
             </View>
 
             <Controller
@@ -314,7 +353,7 @@ export function OnboardingScreen() {
             </View>
           ) : (
             <View className="flex-1">
-              <Button title="Create gym" onPress={submit} loading={form.formState.isSubmitting} />
+              <Button title="Create gym" onPress={submit} loading={form.formState.isSubmitting || isUploading} />
             </View>
           )}
         </View>

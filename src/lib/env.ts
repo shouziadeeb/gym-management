@@ -8,6 +8,7 @@ type RequiredEnv = {
 type OptionalEnv = {
   EXPO_PUBLIC_ENABLE_DEV_AUTH: string;
   EXPO_PUBLIC_ALLOW_PROD_DEV_AUTH: string;
+  EXPO_PUBLIC_SUPABASE_STORAGE_BUCKET: string;
 };
 
 function readEnv(): RequiredEnv {
@@ -24,6 +25,7 @@ export const env = readEnv();
 export const optionalEnv: OptionalEnv = {
   EXPO_PUBLIC_ENABLE_DEV_AUTH: process.env.EXPO_PUBLIC_ENABLE_DEV_AUTH?.trim() ?? '',
   EXPO_PUBLIC_ALLOW_PROD_DEV_AUTH: process.env.EXPO_PUBLIC_ALLOW_PROD_DEV_AUTH?.trim() ?? '',
+  EXPO_PUBLIC_SUPABASE_STORAGE_BUCKET: process.env.EXPO_PUBLIC_SUPABASE_STORAGE_BUCKET?.trim() ?? '',
 };
 
 export function isDevAuthEnabled(): boolean {

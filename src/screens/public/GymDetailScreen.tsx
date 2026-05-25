@@ -1,12 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { fetchGymById } from '@/api/gyms.api';
 import { queryKeys } from '@/api/queries/keys';
+import { GymLogo } from '@/components/gym/GymLogo';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { layout, text } from '@/theme/classes';
 import type { GymSettings } from '@/types/models';
+import { compactList, formatInrFromCents } from '@/utils/gym-settings';
 
 type Props = {
   gymId?: string;
@@ -62,8 +64,11 @@ export function GymDetailScreen({ gymId }: Props) {
       </Card>
 
       <Card title="Gym Information">
+        <View className="mb-3">
+          <GymLogo logoUrl={gym.logo_url} gymName={gym.name} size="lg" />
+        </View>
         <Text className={text.bodySm}>Gym Type: {settings.gymType ?? 'Not provided'}</Text>
-        {gym.logo_url ? <Text className={`${layout.stackSm} ${text.bodySm}`}>Logo URL: {gym.logo_url}</Text> : null}
+        {gym.logo_url ? <Text className={`${layout.stackSm} ${text.caption}`}>Logo linked from storage</Text> : null}
       </Card>
 
       <Card title="Gym Timing">
@@ -76,18 +81,18 @@ export function GymDetailScreen({ gymId }: Props) {
 
       <Card title="Membership Setup">
         <Text className={text.bodySm}>
-          Monthly Fee: {formatCents(membershipPlans?.monthlyFeeCents)}
+          Monthly Fee: {formatInrFromCents(membershipPlans?.monthlyFeeCents)}
         </Text>
         <Text className={`${layout.stackSm} ${text.bodySm}`}>
-          Quarterly Fee: {formatCents(membershipPlans?.quarterlyFeeCents)}
+          Quarterly Fee: {formatInrFromCents(membershipPlans?.quarterlyFeeCents)}
         </Text>
         <Text className={`${layout.stackSm} ${text.bodySm}`}>
-          Yearly Fee: {formatCents(membershipPlans?.yearlyFeeCents)}
+          Yearly Fee: {formatInrFromCents(membershipPlans?.yearlyFeeCents)}
         </Text>
       </Card>
 
       <Card title="Facilities">
-        <Text className={text.bodySm}>{facilities.length ? facilities.join(', ') : 'Not provided'}</Text>
+        <Text className={text.bodySm}>{compactList(facilities, 10)}</Text>
       </Card>
 
       <Card title="Owner Information">
@@ -104,7 +109,3 @@ function parseGymSettings(raw: unknown): GymSettings {
   return raw as GymSettings;
 }
 
-function formatCents(value: number | null | undefined): string {
-  if (typeof value !== 'number' || Number.isNaN(value)) return 'Not set';
-  return `$${(value / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}

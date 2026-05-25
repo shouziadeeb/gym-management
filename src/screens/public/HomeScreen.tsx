@@ -5,11 +5,13 @@ import { Text, View } from 'react-native';
 
 import { fetchPublicGyms } from '@/api/gyms.api';
 import { queryKeys } from '@/api/queries/keys';
+import { GymLogo } from '@/components/gym/GymLogo';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
 import { layout, text } from '@/theme/classes';
+import { compactList, formatInrFromCents, parseGymSettings } from '@/utils/gym-settings';
 
 export function HomeScreen() {
   const [query, setQuery] = useState('');
@@ -51,8 +53,34 @@ export function HomeScreen() {
 
       {gyms.map((gym) => (
         <Card key={gym.id}>
+          <View className="mb-3">
+            <GymLogo logoUrl={gym.logo_url} gymName={gym.name} size="md" />
+          </View>
           <Text className={text.listTitle}>{gym.name}</Text>
           {gym.description ? <Text className={`${layout.stackSm} ${text.caption}`}>{gym.description}</Text> : null}
+
+          {(() => {
+            const settings = parseGymSettings(gym.settings);
+            const monthly = formatInrFromCents(settings.membershipPlans?.monthlyFeeCents);
+            const quarterly = formatInrFromCents(settings.membershipPlans?.quarterlyFeeCents);
+            const yearly = formatInrFromCents(settings.membershipPlans?.yearlyFeeCents);
+            const timings =
+              settings.timings?.openingTime && settings.timings?.closingTime
+                ? `${settings.timings.openingTime} - ${settings.timings.closingTime}`
+                : 'N/A';
+            const facilities = compactList(settings.facilities, 4);
+
+            return (
+              <View className={layout.stackMd}>
+                <Text className={text.bodySm}>Timings: {timings}</Text>
+                <Text className={`${layout.stackSm} ${text.bodySm}`}>Facilities: {facilities}</Text>
+                <Text className={`${layout.stackSm} ${text.bodySm}`}>
+                  Price: Monthly {monthly} • Quarterly {quarterly} • Yearly {yearly}
+                </Text>
+              </View>
+            );
+          })()}
+
           <View className={layout.stackMd}>
             <Button title="View details" variant="ghost" onPress={() => router.push(`/gym/${gym.id}`)} />
           </View>
