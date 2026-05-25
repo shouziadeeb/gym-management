@@ -370,6 +370,9 @@ export function ProfileHubScreen() {
         </Card>
       )}
 
+        </>
+      )}
+
       <Modal visible={showMenu} transparent animationType="fade" onRequestClose={closeMenu}>
         <Pressable className="flex-1" style={modalOverlay(colors)} onPress={closeMenu}>
           <Pressable
@@ -397,16 +400,28 @@ export function ProfileHubScreen() {
               />
             </View>
 
-            <View className="mt-2">
-              <Button
-                title="Logout"
-                variant="danger"
-                onPress={() => {
-                  closeMenu();
-                  setShowLogoutConfirm(true);
-                }}
-              />
-            </View>
+            {isAuthenticated ? (
+              <View className="mt-2">
+                <Button
+                  title="Logout"
+                  variant="danger"
+                  onPress={() => {
+                    closeMenu();
+                    setShowLogoutConfirm(true);
+                  }}
+                />
+              </View>
+            ) : (
+              <View className="mt-2">
+                <Button
+                  title="Login"
+                  onPress={() => {
+                    closeMenu();
+                    router.push("/auth/login");
+                  }}
+                />
+              </View>
+            )}
           </Pressable>
         </Pressable>
       </Modal>
@@ -441,8 +456,6 @@ export function ProfileHubScreen() {
           </Pressable>
         </Pressable>
       </Modal>
-        </>
-      )}
     </Screen>
   );
 }
