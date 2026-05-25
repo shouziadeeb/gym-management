@@ -7,6 +7,7 @@ type RequiredEnv = {
 
 type OptionalEnv = {
   EXPO_PUBLIC_ENABLE_DEV_AUTH: string;
+  EXPO_PUBLIC_ALLOW_PROD_DEV_AUTH: string;
 };
 
 function readEnv(): RequiredEnv {
@@ -22,10 +23,18 @@ function readEnv(): RequiredEnv {
 export const env = readEnv();
 export const optionalEnv: OptionalEnv = {
   EXPO_PUBLIC_ENABLE_DEV_AUTH: process.env.EXPO_PUBLIC_ENABLE_DEV_AUTH?.trim() ?? '',
+  EXPO_PUBLIC_ALLOW_PROD_DEV_AUTH: process.env.EXPO_PUBLIC_ALLOW_PROD_DEV_AUTH?.trim() ?? '',
 };
 
 export function isDevAuthEnabled(): boolean {
-  return __DEV__ && optionalEnv.EXPO_PUBLIC_ENABLE_DEV_AUTH.toLowerCase() === 'true';
+  const enableDevAuth = optionalEnv.EXPO_PUBLIC_ENABLE_DEV_AUTH.toLowerCase() === 'true';
+  const allowProdDevAuth = optionalEnv.EXPO_PUBLIC_ALLOW_PROD_DEV_AUTH.toLowerCase() === 'true';
+
+  // Local dev: only EXPO_PUBLIC_ENABLE_DEV_AUTH=true is needed.
+  if (__DEV__) return enableDevAuth;
+
+  // Hosted/prod-like builds: require an explicit second flag to avoid accidental enablement.
+  return enableDevAuth && allowProdDevAuth;
 }
 
 export function assertRequiredEnv(): void {
