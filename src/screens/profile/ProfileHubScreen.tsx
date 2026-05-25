@@ -65,28 +65,8 @@ export function ProfileHubScreen() {
   async function handleSignOut() {
     await signOut();
     resetGymContext();
-    router.replace("/");
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <Screen scroll>
-        <Text className={`${layout.screenTop} ${text.screenTitle}`}>Profile</Text>
-        <Text className={`${layout.stack} ${text.screenSubtitle}`}>
-          Sign in to unlock memberships, bookings, and owner tools.
-        </Text>
-
-        <Card title="Account" className={layout.section}>
-          <Button title="Login" onPress={() => router.push("/auth/login")} />
-          <View className={layout.buttonSpacing} />
-          <Button
-            title="Signup"
-            variant="ghost"
-            onPress={() => router.push("/auth/signup")}
-          />
-        </Card>
-      </Screen>
-    );
+    closeMenu();
+    setShowLogoutConfirm(false);
   }
 
   const profile = myProfileQuery.data;
@@ -174,6 +154,25 @@ export function ProfileHubScreen() {
 
   return (
     <Screen scroll>
+      {!isAuthenticated ? (
+        <>
+          <Text className={`${layout.screenTop} ${text.screenTitle}`}>Profile</Text>
+          <Text className={`${layout.stack} ${text.screenSubtitle}`}>
+            Sign in to unlock memberships, bookings, and owner tools.
+          </Text>
+
+          <Card title="Account" className={layout.section}>
+            <Button title="Login" onPress={() => router.push("/auth/login")} />
+            <View className={layout.buttonSpacing} />
+            <Button
+              title="Signup"
+              variant="ghost"
+              onPress={() => router.push("/auth/signup")}
+            />
+          </Card>
+        </>
+      ) : (
+        <>
       <View className={layout.screenTop}>
         <Text className={text.screenTitle}>Profile</Text>
         <Text className={`${layout.stack} ${text.screenSubtitle}`}>
@@ -442,6 +441,8 @@ export function ProfileHubScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+        </>
+      )}
     </Screen>
   );
 }
