@@ -9,6 +9,7 @@ import { StyleSheet, colorScheme as nativewindColorScheme } from 'nativewind';
 import { queryClient } from '@/api/queries/client';
 import { useRegisterPush } from '@/hooks/useRegisterPush';
 import { useTheme } from '@/hooks/useTheme';
+import { webFullWidthStyle } from '@/lib/web-layout';
 
 function PushBootstrap() {
   useRegisterPush();
@@ -29,9 +30,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
   }, [colorScheme]);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>
-      <SafeAreaProvider style={{ flex: 1 }}>
-        <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background, ...webFullWidthStyle }}>
+      <SafeAreaProvider style={{ flex: 1, ...webFullWidthStyle }}>
+        <View style={{ flex: 1, backgroundColor: colors.background, ...webFullWidthStyle }}>
           <QueryClientProvider client={queryClient}>
             <PushBootstrap />
             <StatusBar style={isDark ? 'light' : 'dark'} />

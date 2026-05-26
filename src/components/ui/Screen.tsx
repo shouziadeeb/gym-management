@@ -4,6 +4,8 @@ import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
 import { useScreenContentInsets } from '@/hooks/useScreenContentInsets';
 import { useTheme } from '@/hooks/useTheme';
+import { isWeb, webFullWidthStyle, webScrollContainerStyle } from '@/lib/web-layout';
+import { screenLayout } from '@/theme/spacing';
 
 type Props = {
   children: ReactNode;
@@ -29,21 +31,35 @@ export function Screen({
   const { colors } = useTheme();
   const { bottomInset } = useScreenContentInsets({ omitTopSafeArea });
   const backgroundColor = colors.background;
+  const horizontalPadding = screenLayout.screenPaddingX;
 
+  /** Web mobile browsers don't need horizontal safe-area padding; it narrows tab content. */
   const safeEdges: Edge[] = omitTopSafeArea
-    ? ['left', 'right']
-    : ['top', 'left', 'right'];
+    ? isWeb
+      ? []
+      : ['left', 'right']
+    : isWeb
+      ? ['top']
+      : ['top', 'left', 'right'];
 
   const scrollContentStyle: ViewStyle = {
     paddingBottom: bottomInset,
     flexGrow: 1,
+    ...(isWeb ? webFullWidthStyle : null),
+  };
+
+  const paddedContentStyle: ViewStyle = {
+    flex: 1,
+    paddingHorizontal: horizontalPadding,
+    backgroundColor,
+    ...webFullWidthStyle,
   };
 
   const inner = scroll ? (
     <ScrollView
-      className="flex-1 px-4"
-      style={{ backgroundColor }}
+      style={[{ flex: 1, backgroundColor }, webScrollContainerStyle]}
       contentContainerStyle={scrollContentStyle}
+      showsVerticalScrollIndicator={!isWeb}
       keyboardShouldPersistTaps="handled"
       refreshControl={
         onRefresh ? (
@@ -51,16 +67,21 @@ export function Screen({
         ) : undefined
       }
     >
-      {children}
+      <View style={paddedContentStyle} className={className}>
+        {children}
+      </View>
     </ScrollView>
   ) : (
-    <View className={`flex-1 px-4 ${className ?? ''}`} style={{ backgroundColor }}>
+    <View style={[paddedContentStyle, webScrollContainerStyle]} className={className}>
       {children}
     </View>
   );
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor }} edges={safeEdges}>
+    <SafeAreaView
+      style={[{ flex: 1, backgroundColor }, webFullWidthStyle]}
+      edges={safeEdges}
+    >
       {inner}
     </SafeAreaView>
   );

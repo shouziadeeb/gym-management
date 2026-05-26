@@ -28,7 +28,10 @@
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "bundler": "metro"
+      "bundler": "metro",
+      "meta": {
+        "viewport": "width=device-width, initial-scale=1, viewport-fit=cover"
+      }
     },
     "plugins": [
       "expo-secure-store",

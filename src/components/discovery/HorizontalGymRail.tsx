@@ -1,8 +1,10 @@
-import { FlatList, StyleSheet, useWindowDimensions } from 'react-native';
+import { useCallback, useState } from 'react';
+import { FlatList, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 
 import type { GymCardPresentation } from '@/domain/discovery/types';
 
 import { GymDiscoverCard } from '@/components/discovery/GymDiscoverCard';
+import { carouselPageStyle, webFullBleedRailStyle, webHorizontalPagingStyle } from '@/lib/web-layout';
 
 type Props = {
   items: GymCardPresentation[];
@@ -15,26 +17,46 @@ type Props = {
 
 /** Horizontal inset on the rail (`contentContainerStyle.paddingHorizontal` × 2). */
 const RAIL_INSET_TOTAL = 32;
+const RAIL_EDGE_PADDING = 16;
 
 export function HorizontalGymRail({ items, onPressGym, cardWidth: cardWidthProp }: Props) {
-  const { width: windowWidth } = useWindowDimensions();
-  const cardWidth = cardWidthProp ?? Math.max(260, windowWidth - RAIL_INSET_TOTAL);
+  const [railWidth, setRailWidth] = useState(0);
+
+  const onRailLayout = useCallback((event: LayoutChangeEvent) => {
+    const width = event.nativeEvent.layout.width;
+    if (width > 0) {
+      setRailWidth((current) => (current === width ? current : width));
+    }
+  }, []);
+
+  const cardWidth = cardWidthProp ?? Math.max(260, railWidth - RAIL_INSET_TOTAL);
 
   return (
-    <FlatList
-      horizontal
-      data={items}
-      showsHorizontalScrollIndicator={false}
-      showsVerticalScrollIndicator={false}
-      style={styles.railList}
-      initialNumToRender={4}
-      windowSize={5}
-      contentContainerStyle={{ gap: 12, paddingHorizontal: 16, paddingBottom: 4 }}
-      keyExtractor={(item) => item.id}
-      renderItem={({ item }) => (
-        <GymDiscoverCard variant="rail" railWidth={cardWidth} gym={item} onPress={() => onPressGym(item.id)} />
-      )}
-    />
+    <View style={webFullBleedRailStyle} onLayout={onRailLayout}>
+      {railWidth > 0 ? (
+        <FlatList
+          horizontal
+          data={items}
+          showsHorizontalScrollIndicator={false}
+          showsVerticalScrollIndicator={false}
+          style={[styles.railList, webHorizontalPagingStyle]}
+          initialNumToRender={4}
+          windowSize={5}
+          contentContainerStyle={{ gap: 12, paddingHorizontal: RAIL_EDGE_PADDING, paddingBottom: 4 }}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View style={carouselPageStyle(cardWidth)}>
+              <GymDiscoverCard
+                variant="rail"
+                railWidth={cardWidth}
+                gym={item}
+                onPress={() => onPressGym(item.id)}
+              />
+            </View>
+          )}
+        />
+      ) : null}
+    </View>
   );
 }
 

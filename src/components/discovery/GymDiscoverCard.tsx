@@ -1,6 +1,5 @@
 import { memo, useMemo } from 'react';
-import { Pressable, Text, View } from 'react-native';
-
+import { Platform, Pressable, Text, View } from 'react-native';
 import { ImageCarousel } from '@/components/gym/ImageCarousel';
 import type { GymCardPresentation } from '@/domain/discovery/types';
 
@@ -37,16 +36,22 @@ export const GymDiscoverCard = memo(function GymDiscoverCard({
   const visibleCategories = gym.categories.slice(0, 3);
   const imageUrls = gym.imageUrls.length > 0 ? gym.imageUrls : gym.imageUrl ? [gym.imageUrl] : [];
 
+  const cardStyle =
+    variant === 'rail'
+      ? { width: cardWidth, alignSelf: 'flex-start' as const }
+      : Platform.OS === 'web'
+        ? { width: '100%' as const, alignSelf: 'stretch' as const }
+        : { alignSelf: 'stretch' as const };
+
   return (
     <View
       className={`${layout.cardSpacing} rounded-3xl border px-4 py-3`}
       style={{
         borderColor: colors.border,
         backgroundColor: colors.card,
-        width: cardWidth,
+        ...cardStyle,
       }}
-    >
-      <View className="overflow-hidden rounded-2xl border" style={{ borderColor: colors.border }}>
+    >      <View className="overflow-hidden rounded-2xl border" style={{ borderColor: colors.border }}>
         {imageUrls.length > 0 ? (
           <ImageCarousel
             imageUrls={imageUrls}

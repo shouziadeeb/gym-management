@@ -10,6 +10,7 @@ import { AppProviders } from '@/AppProviders';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/store/auth.store';
+import { webFullWidthStyle } from '@/lib/web-layout';
 import { createNavigationTheme } from '@/theme/navigation';
 import { layout, surfaces } from '@/theme/classes';
 
@@ -68,7 +69,7 @@ export default function RootLayout() {
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
         ) : (
-          <View style={{ flex: 1, backgroundColor: colors.background }}>
+          <View style={{ flex: 1, backgroundColor: colors.background, ...webFullWidthStyle }}>
             <GlobalBackButton />
             <Stack
               screenOptions={{

@@ -2,13 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Complements expo-router ScrollViewStyleReset (+html.tsx).
+ * Do not override #root/body display:flex or width — the reset handles root layout.
+ */
 html,
 body,
 #root {
   @apply bg-slate-50 dark:bg-slate-950;
 }
 
-/* RN Web (Explore FlatList): remove persistent scrollbar gutter; scrolling still works. */
+body {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
+
+/* RN Web: hide scrollbars while keeping scroll behavior. */
 #exploreMarketplaceFlatListScroll {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -17,4 +28,18 @@ body,
   width: 0;
   height: 0;
   display: none;
+}
+
+/* RN Web horizontal lists: prevent flex-shrink showing multiple slides. */
+[data-rnw-carousel='paging'] {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+[data-rnw-carousel='paging']::-webkit-scrollbar {
+  display: none;
+}
+[data-rnw-carousel='paging'] > div {
+  flex-shrink: 0;
 }

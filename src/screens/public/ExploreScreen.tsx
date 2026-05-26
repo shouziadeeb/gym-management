@@ -19,6 +19,7 @@ import { GymDiscoverCardSkeleton } from '@/components/discovery/GymDiscoverCardS
 import { SelectField } from '@/components/ui/SelectField';
 import { Card } from '@/components/ui/Card';
 import { Screen, useScreenScrollBottomPadding } from '@/components/ui/Screen';
+import { webScrollContainerStyle } from '@/lib/web-layout';
 import {
   DEFAULT_EXPLORE_SORT,
   EXPLORE_SEARCH_DEBOUNCE_MS,
@@ -210,14 +211,7 @@ export function ExploreScreen() {
     );
   }
 
-  const listScrollStyle =
-    Platform.OS === 'web'
-      ? ({
-          flex: 1,
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
-        } as const)
-      : { flex: 1 };
+  const listScrollStyle = Platform.OS === 'web' ? ({ flex: 1, ...webScrollContainerStyle } as const) : { flex: 1 };
 
   return (
     <Screen>

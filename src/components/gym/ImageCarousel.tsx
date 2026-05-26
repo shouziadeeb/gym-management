@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   Image,
+  Platform,
   type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -10,6 +11,12 @@ import {
 } from 'react-native';
 
 import { useTheme } from '@/hooks/useTheme';
+import {
+  carouselPageStyle,
+  horizontalPagingListStyle,
+  webHorizontalPageStyle,
+  webHorizontalPagingStyle,
+} from '@/lib/web-layout';
 
 type Props = {
   imageUrls: string[];
@@ -113,7 +120,13 @@ export function ImageCarousel({
     <Wrapper
       {...wrapperProps}
       onLayout={onLayout}
-      style={{ height, borderRadius, overflow: 'hidden', backgroundColor: colors.muted }}
+      style={{
+        width: '100%',
+        height,
+        borderRadius,
+        overflow: 'hidden',
+        backgroundColor: colors.muted,
+      }}
     >
       {containerWidth > 0 ? (
         <FlatList
@@ -124,6 +137,12 @@ export function ImageCarousel({
           nestedScrollEnabled
           scrollEnabled={imageUrls.length > 1}
           showsHorizontalScrollIndicator={false}
+          style={[horizontalPagingListStyle(containerWidth), webHorizontalPagingStyle]}
+          contentContainerStyle={{ flexGrow: 0 }}
+          {...(Platform.OS === 'web' ? { dataSet: { rnwCarousel: 'paging' } } : null)}
+          snapToInterval={containerWidth}
+          decelerationRate="fast"
+          disableIntervalMomentum
           onScroll={onScroll}
           scrollEventThrottle={16}
           keyExtractor={(uri, index) => `${uri}-${index}`}
@@ -139,15 +158,18 @@ export function ImageCarousel({
             });
           }}
           renderItem={({ item }) => (
-            <Image
-              source={{ uri: item }}
-              style={{
-                width: containerWidth,
-                height,
-                backgroundColor: colors.muted,
-              }}
-              resizeMode="cover"
-            />
+            <View style={[carouselPageStyle(containerWidth), webHorizontalPageStyle]}>
+              <Image
+                source={{ uri: item }}
+                style={{
+                  width: containerWidth,
+                  height,
+                  flexShrink: 0,
+                  backgroundColor: colors.muted,
+                }}
+                resizeMode="cover"
+              />
+            </View>
           )}
         />
       ) : null}

@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { ScrollView, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { screenLayout } from '@/theme/spacing';
+import { webFullBleedRailStyle, webHorizontalPagingStyle } from '@/lib/web-layout';
 
 type Props = {
   children: ReactNode;
@@ -22,12 +23,12 @@ export function FullWidthHorizontalScroll({
   style,
 }: Props) {
   return (
-    <View style={[{ marginHorizontal: -edgePadding }, style]}>
+    <View style={[{ marginHorizontal: -edgePadding }, webFullBleedRailStyle, style]}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
-        style={{ flexGrow: 0 }}
+        style={[{ flexGrow: 0 }, webHorizontalPagingStyle]}
         contentContainerStyle={{
           gap,
           paddingHorizontal: edgePadding,

@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSegments } from 'expo-router';
 
@@ -22,8 +23,10 @@ export function useScreenContentInsets(options?: Options) {
 
   const topInset = options?.omitTopSafeArea ? 0 : insets.top;
 
+  const webTabBottomPadding = Platform.OS === 'web' && inTabs ? screenLayout.screenPaddingBottom : 0;
+
   const bottomInset = inTabs
-    ? screenLayout.scrollEndPadding
+    ? screenLayout.scrollEndPadding + webTabBottomPadding
     : screenLayout.screenPaddingBottom + insets.bottom;
 
   return {
