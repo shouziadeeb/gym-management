@@ -29,6 +29,7 @@ import { useAppStore } from '@/store/app.store';
 import { useAuthStore } from '@/store/auth.store';
 import { toE164 } from '@/utils/phone';
 import { layout, surfaces, text } from '@/theme/classes';
+import { spacing } from '@/theme/spacing';
 import { cardSurface, inputSurface, modalOverlay } from '@/theme/styles';
 import type { MembershipPlanType } from '@/domain/memberships';
 
@@ -272,7 +273,7 @@ export function MembersScreen() {
       <Text className={text.caption}>Invite by phone (user must sign up first)</Text>
 
       <Card title="Actions">
-        <View className={layout.row}>
+        <View className={layout.row} style={{ gap: spacing[2] }}>
           <View className={layout.flex1}>
             <Button
               title="Add Member"
@@ -282,7 +283,7 @@ export function MembersScreen() {
           </View>
           <View className={layout.flex1}>
             <Button
-              title="Current Members"
+              title="Members"
               variant={ownerView === 'current_members' ? 'primary' : 'ghost'}
               onPress={() => setOwnerView('current_members')}
             />
@@ -436,7 +437,7 @@ export function MembersScreen() {
 
       <Card title="Pagination">
         <Text className={text.caption}>{ownerDashboard.paginationLabel}</Text>
-        <View className={`${layout.stackMd} ${layout.row}`}>
+        <View className={`${layout.stackMd} ${layout.row}`} style={{ gap: spacing[2] }}>
           <View className={layout.flex1}>
             <Button title="Previous" variant="ghost" onPress={ownerDashboard.prevPage} disabled={ownerDashboard.page <= 1} />
           </View>

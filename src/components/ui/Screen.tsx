@@ -67,12 +67,12 @@ export function Screen({
         ) : undefined
       }
     >
-      <View style={paddedContentStyle} className={className}>
+      <View style={paddedContentStyle} className={`w-full ${className ?? ''}`}>
         {children}
       </View>
     </ScrollView>
   ) : (
-    <View style={[paddedContentStyle, webScrollContainerStyle]} className={className}>
+    <View style={[paddedContentStyle, webScrollContainerStyle]} className={`w-full ${className ?? ''}`}>
       {children}
     </View>
   );

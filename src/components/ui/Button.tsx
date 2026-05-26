@@ -10,17 +10,19 @@ type Props = {
   variant?: 'primary' | 'ghost' | 'danger';
   disabled?: boolean;
   loading?: boolean;
+  /** When false, button sizes to its container instead of stretching full width. */
+  fullWidth?: boolean;
 };
 
-export function Button({ title, onPress, variant = 'primary', disabled, loading }: Props) {
+export function Button({ title, onPress, variant = 'primary', disabled, loading, fullWidth = true }: Props) {
   const { colors } = useTheme();
 
   const spinnerColor = buttonLabelColor(colors, variant);
 
   return (
     <Pressable
-      className={`${buttons.base} ${disabled || loading ? buttons.disabled : ''}`}
-      style={buttonSurface(colors, variant)}
+      className={`${buttons.base} ${fullWidth ? 'w-full' : ''} ${disabled || loading ? buttons.disabled : ''}`}
+      style={[buttonSurface(colors, variant), fullWidth ? { alignSelf: 'stretch' } : { flexShrink: 0 }]}
       onPress={onPress}
       disabled={disabled || loading}
     >

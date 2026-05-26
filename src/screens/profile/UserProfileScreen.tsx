@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/Input';
 import { LocationPickerField } from '@/components/ui/LocationPickerField';
 import { Screen } from '@/components/ui/Screen';
 import { SelectField } from '@/components/ui/SelectField';
-import { resolveDisplayName } from '@/domain/profiles';
+import { resolveDisplayName, resolveProfileAddress } from '@/domain/profiles';
 import {
   PROFILE_GENDER_OPTIONS,
   ageFromDateOfBirth,
@@ -26,6 +26,7 @@ import { useMyProfile } from '@/hooks/useMyProfile';
 import { getErrorMessage } from '@/lib/errors';
 import { useAuthStore } from '@/store/auth.store';
 import { layout, text } from '@/theme/classes';
+import { spacing } from '@/theme/spacing';
 import { useTheme } from '@/hooks/useTheme';
 
 function resolveGender(gender: string | null | undefined): ProfileGenderValue {
@@ -89,11 +90,7 @@ export function UserProfileScreen() {
         ? String(ageFromDateOfBirth(profile.date_of_birth) ?? '')
         : '';
 
-  const savedHomePin =
-    profile?.home_location_label?.trim() ||
-    (typeof profile?.home_latitude === 'number' && typeof profile?.home_longitude === 'number'
-      ? `${profile.home_latitude.toFixed(4)} · ${profile.home_longitude.toFixed(4)}`
-      : '');
+  const profileAddress = resolveProfileAddress(profile);
 
   const birthDateBounds = useMemo(() => {
     const maximumDate = new Date();
@@ -224,8 +221,7 @@ export function UserProfileScreen() {
             label="Date of birth"
             value={formatDateLabel(profile?.date_of_birth)}
           />
-          <ProfileDetailRow label="City" value={profile?.city?.trim() || 'Not set'} />
-          <ProfileDetailRow label="Home map pin (optional)" value={savedHomePin.trim() ? savedHomePin : 'Not set'} />
+          <ProfileDetailRow label="Address" value={profileAddress ?? 'Not set'} />
           <ProfileDetailRow label="Fitness goal" value={profile?.fitness_goal?.trim() || 'Not set'} />
 
           <View className={layout.stackMd}>
@@ -273,12 +269,18 @@ export function UserProfileScreen() {
             control={form.control}
             name="city"
             render={({ field: { onChange, value } }) => (
-              <Input label="City" placeholder="Delhi" value={value} onChangeText={onChange} autoCapitalize="sentences" />
+              <Input
+                label="Address (manual)"
+                placeholder="Street, area, city"
+                value={value}
+                onChangeText={onChange}
+                autoCapitalize="sentences"
+              />
             )}
           />
           <LocationPickerField
-            label="Home map pin"
-            description="Optional — improves nearby rankings when GPS is unavailable."
+            label="Home location"
+            description="Preferred — this address is shown on your profile when set."
             latitude={form.watch('homeLatitude')}
             longitude={form.watch('homeLongitude')}
             locationLabel={form.watch('homeLocationLabel')}
@@ -316,7 +318,7 @@ export function UserProfileScreen() {
           ) : null}
           {form.formState.errors.root?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.root.message}</Text> : null}
 
-          <View className="flex-row gap-2">
+          <View className="flex-row" style={{ gap: spacing[2] }}>
             <View className="flex-1">
               <Button
                 title="Cancel"

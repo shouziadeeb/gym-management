@@ -45,6 +45,23 @@ export type Gym = {
   trending_score?: number | null;
   categories?: string[] | null;
   is_active?: boolean | null;
+  attendance_token?: string | null;
+  attendance_enabled?: boolean | null;
+  qr_generated_at?: string | null;
+};
+
+export type Attendance = {
+  id: string;
+  gym_id: string;
+  user_id: string;
+  member_id: string;
+  scanned_token: string | null;
+  attendance_date: string;
+  attendance_time: string;
+  checked_in_at: string;
+  checked_out_at: string | null;
+  source: string | null;
+  created_at: string;
 };
 
 export type GymSettings = {

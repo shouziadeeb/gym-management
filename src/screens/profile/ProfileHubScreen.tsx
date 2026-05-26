@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { AppOptionsMenu } from '@/components/layout/AppOptionsMenu';
 import { OwnerGymProfileCard } from '@/features/profile';
-import { isProfileComplete, resolveDisplayName } from '@/domain/profiles';
+import { isProfileComplete, resolveDisplayName, resolveProfileAddress } from '@/domain/profiles';
 import { useMyProfile } from '@/hooks/useMyProfile';
 import { useTheme } from '@/hooks/useTheme';
 import { useUserGyms } from '@/hooks/useUserGyms';
@@ -14,6 +14,7 @@ import { useAppStore } from '@/store/app.store';
 import { useAuthStore } from '@/store/auth.store';
 import { useProfileMenuStore } from '@/store/profile-menu.store';
 import { layout, text } from '@/theme/classes';
+import { spacing } from '@/theme/spacing';
 
 export function ProfileHubScreen() {
   const { colors } = useTheme();
@@ -30,6 +31,7 @@ export function ProfileHubScreen() {
   const resolvedPhone = profile?.phone ?? session?.user.phone ?? null;
   const resolvedName = resolveDisplayName(profile?.full_name, resolvedPhone, session?.user.id ?? null);
   const profileComplete = isProfileComplete(profile);
+  const profileAddress = resolveProfileAddress(profile);
   const activeGym = ownedGyms.find((gym) => gym.id === activeOwnerGymId) ?? ownedGyms[0] ?? null;
 
   const profileHeader = (
@@ -83,7 +85,7 @@ export function ProfileHubScreen() {
             <Text className={`mb-1 ${text.caption}`}>Phone: {resolvedPhone ?? 'Not available'}</Text>
             <Text className={`mb-1 ${text.caption}`}>Name: {resolvedName}</Text>
             <Text className={`mb-1 ${text.caption}`}>Gender: {profile?.gender ?? 'Not set'}</Text>
-            <Text className={`mb-1 ${text.caption}`}>City: {profile?.city ?? 'Not set'}</Text>
+            <Text className={`mb-1 ${text.caption}`}>Address: {profileAddress ?? 'Not set'}</Text>
             <Text className={`mb-3 ${text.caption}`}>
               Avatar:{' '}
               {profile?.full_name?.trim() ? profile.full_name.trim().charAt(0).toUpperCase() : 'N/A'}
@@ -107,8 +109,8 @@ export function ProfileHubScreen() {
             <Card title="Membership overview">
               <Text className={text.caption}>Joined gyms: {memberGyms.length}</Text>
               <Text className={`${layout.stackSm} ${text.caption}`}>Owned gyms: {ownedGyms.length}</Text>
-              <View className={layout.stackMd}>
-                <View className={layout.row}>
+              <View className={layout.vstack} style={{ gap: spacing[3], marginTop: spacing[3] }}>
+                <View className={`${layout.row} w-full`} style={{ gap: spacing[2] }}>
                   <View className={layout.flex1}>
                     <Button
                       title="Add Member"
@@ -120,7 +122,7 @@ export function ProfileHubScreen() {
                   </View>
                   <View className={layout.flex1}>
                     <Button
-                      title="Current Members"
+                      title="Members"
                       variant="ghost"
                       onPress={() => {
                         setAppMode('owner');
@@ -129,6 +131,14 @@ export function ProfileHubScreen() {
                     />
                   </View>
                 </View>
+                <Button
+                  title="Attendance dashboard"
+                  variant="ghost"
+                  onPress={() => {
+                    setAppMode('owner');
+                    router.push('/attendance');
+                  }}
+                />
               </View>
             </Card>
           ) : null}

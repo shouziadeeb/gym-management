@@ -37,6 +37,13 @@ export const queryKeys = {
     signals: (userId?: string) => ['discovery', 'signals', userId] as const,
     preferences: (userId?: string) => ['discovery', 'preferences', userId] as const,
   },
+  attendance: {
+    settings: (gymId?: string) => ['attendance', 'settings', gymId] as const,
+    today: (gymId?: string, date?: string) => ['attendance', 'today', gymId, date ?? 'today'] as const,
+    ownerHistory: (gymId?: string, filtersKey?: string, page?: number) =>
+      ['attendance', 'owner', gymId, filtersKey ?? 'all', page ?? 1] as const,
+    memberHistory: (gymId?: string, page?: number) => ['attendance', 'member', gymId ?? 'all', page ?? 1] as const,
+  },
   config: {
     staleTime: QUERY_STALE_TIME_MS,
     retry: QUERY_RETRY_COUNT,

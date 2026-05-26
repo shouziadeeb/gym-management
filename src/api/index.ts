@@ -1,3 +1,4 @@
+export * from '@/api/attendance.api';
 export * from '@/api/gyms.api';
 export * from '@/api/gyms-discovery.api';
 export * from '@/api/gym-images.api';

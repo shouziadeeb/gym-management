@@ -75,7 +75,7 @@ export default function RootLayout() {
               screenOptions={{
                 headerShown: false,
                 animation: 'default',
-                contentStyle: { backgroundColor: colors.background },
+                contentStyle: { backgroundColor: colors.background, flex: 1, width: '100%' },
               }}
             >
               <Stack.Screen name="(tabs)" />
@@ -87,6 +87,9 @@ export default function RootLayout() {
               <Stack.Screen name="dashboard" />
               <Stack.Screen name="manage-members" />
               <Stack.Screen name="analytics" />
+              <Stack.Screen name="attendance" />
+              <Stack.Screen name="attendance-scan" />
+              <Stack.Screen name="attendance-history" />
               <Stack.Screen name="membership-lifecycle" />
               <Stack.Screen name="profile" />
               <Stack.Screen name="bookings" />

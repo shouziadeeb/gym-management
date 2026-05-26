@@ -6,6 +6,7 @@ import { MembershipStatusBadge } from '@/components/MembershipStatusBadge';
 import { GymLogo } from '@/components/gym/GymLogo';
 import { Card } from '@/components/ui/Card';
 import { text } from '@/theme/classes';
+import { spacing } from '@/theme/spacing';
 import { getMembershipCountdownLabel } from '@/domain/memberships';
 
 type Props = {
@@ -36,7 +37,7 @@ export function OwnerMemberProfileCard({ member, action }: Props) {
       </View>
 
       {action ? (
-        <View className="mt-3 flex-row gap-2">
+        <View className="mt-3 flex-row" style={{ gap: spacing[2] }}>
           {action}
         </View>
       ) : null}

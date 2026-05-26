@@ -1,6 +1,6 @@
 import { AuthError } from '@supabase/supabase-js';
 
-import { isPostgrestError } from '@/utils/supabase-errors';
+import { isAttendanceMigrationMissingError, isPostgrestError } from '@/utils/supabase-errors';
 
 export function getErrorMessage(error: unknown): string {
   if (error instanceof AuthError) {
@@ -18,6 +18,10 @@ export function getErrorMessage(error: unknown): string {
       return 'Code expired. Request a new OTP and try again.';
     }
     return error.message;
+  }
+
+  if (isAttendanceMigrationMissingError(error)) {
+    return 'Attendance database setup is missing. Apply supabase/migrations/20260528120000_attendance_qr_system.sql in your Supabase SQL editor, then reload the app.';
   }
 
   if (isPostgrestError(error)) {

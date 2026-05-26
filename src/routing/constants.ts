@@ -13,6 +13,9 @@ export const routes = {
   manageMembers: '/manage-members',
   membershipLifecycle: '/membership-lifecycle',
   analytics: '/analytics',
+  attendance: '/attendance',
+  attendanceScan: '/attendance-scan',
+  attendanceHistory: '/attendance-history',
   bookings: '/bookings',
   gymDetail: (id: string) => `/gym/${id}` as const,
 } as const;

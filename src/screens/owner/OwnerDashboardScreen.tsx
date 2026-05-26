@@ -103,6 +103,7 @@ export function OwnerDashboardScreen() {
         <Text className={text.error}>Expired: {memberships.summary.expired}</Text>
         <View className={layout.stackMd}>
           <Button title="Open Membership Lifecycle" onPress={() => router.push('/membership-lifecycle')} />
+          <Button title="Attendance dashboard" variant="ghost" onPress={() => router.push('/attendance')} />
         </View>
       </Card>
     </Screen>

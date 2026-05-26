@@ -2,6 +2,7 @@ import { format, parseISO } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 import { Alert, Text, View } from 'react-native';
 import { useEffect } from 'react';
+import { router } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 
 import { respondToMemberRequest } from '@/api/member-requests.api';
@@ -23,6 +24,7 @@ import { getErrorMessage } from '@/lib/errors';
 import { useAppStore } from '@/store/app.store';
 import { useAuthStore } from '@/store/auth.store';
 import { layout, text } from '@/theme/classes';
+import { spacing } from '@/theme/spacing';
 import { useState } from 'react';
 
 export function MemberHomeScreen() {
@@ -195,7 +197,9 @@ export function MemberHomeScreen() {
             </Text>
           )}
 
-          <View className={layout.stackMd}>
+          <View className={`${layout.stackLg} ${layout.vstack}`} style={{ gap: spacing[3] }}>
+            <Button title="Scan attendance" onPress={() => router.push('/attendance-scan')} />
+            <Button title="Attendance history" variant="ghost" onPress={() => router.push('/attendance-history')} />
             <Button
               title="Leave Gym"
               variant="danger"

@@ -177,12 +177,12 @@ export function ProfileSetupScreen() {
           control={form.control}
           name="city"
           render={({ field: { onChange, value } }) => (
-            <Input label="City (optional)" placeholder="Delhi" value={value} onChangeText={onChange} autoCapitalize="sentences" />
+            <Input label="Address (optional)" placeholder="Street, area, city" value={value} onChangeText={onChange} autoCapitalize="sentences" />
           )}
         />
         <LocationPickerField
-          label="Home area (optional)"
-          description="Saves a privacy-safe pin so we can rank nearby gyms even if live GPS is disabled later."
+          label="Home location (optional)"
+          description="Preferred — this address is shown on your profile when set."
           latitude={form.watch('homeLatitude')}
           longitude={form.watch('homeLongitude')}
           locationLabel={form.watch('homeLocationLabel')}
