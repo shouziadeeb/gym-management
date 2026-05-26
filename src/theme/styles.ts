@@ -31,7 +31,7 @@ export function buttonSurface(
   }
   return {
     backgroundColor: 'transparent',
-    borderColor: colors.ghostBorder,
+    borderColor: colors.border,
     borderWidth: 1,
   };
 }

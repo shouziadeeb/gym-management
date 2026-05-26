@@ -1,4 +1,6 @@
 export * from '@/api/gyms.api';
+export * from '@/api/gyms-discovery.api';
+export * from '@/api/gym-images.api';
 export * from '@/api/member-requests.api';
 export * from '@/api/membership-lifecycle.api';
 export * from '@/api/members.api';

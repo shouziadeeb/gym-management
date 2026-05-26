@@ -5,14 +5,14 @@
 
 export const text = {
   screenTitle: 'text-3xl font-bold text-slate-900 dark:text-slate-50',
-  screenTitleLg: 'text-2xl font-bold text-slate-900 dark:text-slate-50',
-  screenTitleMd: 'text-xl font-semibold text-slate-900 dark:text-slate-100',
-  screenSubtitle: 'text-base text-slate-600 dark:text-slate-400',
-  body: 'text-base text-slate-700 dark:text-slate-300',
-  bodySm: 'text-sm text-slate-700 dark:text-slate-300',
-  caption: 'text-sm text-slate-600 dark:text-slate-400',
-  label: 'text-sm font-medium text-slate-600 dark:text-slate-400',
-  meta: 'text-slate-500 dark:text-slate-400',
+  screenTitleLg: 'text-2xl font-bold text-slate-900 dark:text-white',
+  screenTitleMd: 'text-xl font-semibold text-slate-900 dark:text-white',
+  screenSubtitle: 'text-base text-slate-600 dark:text-white',
+  body: 'text-base text-slate-700 dark:text-white',
+  bodySm: 'text-sm text-slate-700 dark:text-white',
+  caption: 'text-sm text-slate-600 dark:text-white',
+  label: 'text-sm font-medium text-slate-600 dark:text-white',
+  meta: 'text-slate-500 dark:text-white',
   error: 'text-sm text-red-600 dark:text-red-400',
   link: 'text-sm text-emerald-600 dark:text-emerald-400',
   linkAccent: 'text-sm text-emerald-400',
@@ -26,12 +26,12 @@ export const text = {
 } as const;
 
 export const layout = {
-  screenTop: 'pt-6',
+  screenTop: 'pt-4',
   screenTopLg: 'pt-10',
   screenTopMd: 'pt-8',
   section: 'mt-4',
   sectionLg: 'mt-5',
-  sectionXl: 'mt-6',
+  sectionXl: 'mt-2',
   stackSm: 'mt-1',
   stack: 'mt-2',
   stackMd: 'mt-3',
@@ -40,7 +40,7 @@ export const layout = {
   rowBetween: 'flex-row items-start justify-between',
   flex1: 'flex-1',
   center: 'items-center justify-center',
-  cardSpacing: 'mb-4',
+  cardSpacing: 'mb-2',
   buttonSpacing: 'mt-2',
 } as const;
 

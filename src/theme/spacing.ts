@@ -19,7 +19,10 @@ export const spacing = {
 
 export const screenLayout = {
   screenPaddingX: spacing[4],
-  screenPaddingBottom: spacing[8],
+  /** Stack / full-screen routes: room above system home indicator or Android nav bar. */
+  screenPaddingBottom: spacing[6],
+  /** Tab routes: tab navigator already clears the tab bar — small scroll tail only. */
+  scrollEndPadding: spacing[4],
   sectionGap: spacing[4],
   stackGap: spacing[2],
   cardPadding: spacing[4],

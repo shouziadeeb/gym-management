@@ -1,19 +1,22 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert, ScrollView, Text, View } from 'react-native';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { z } from 'zod';
 
 import { queryClient } from '@/api/queries/client';
 import { queryKeys } from '@/api/queries/keys';
 import { updateGym } from '@/api/gyms.api';
+import { addGymImage, getGymImages, removeGymImage, type GymImage } from '@/api/gym-images.api';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
+import { GymImagePicker } from '@/components/gym/GymImagePicker';
 import { useUserGyms } from '@/hooks/useUserGyms';
 import { getErrorMessage } from '@/lib/errors';
+import { deleteImageByUrl } from '@/lib/storage';
 import { signOut } from '@/services/auth/auth.service';
 import { useAppStore } from '@/store/app.store';
 import { layout, text } from '@/theme/classes';
@@ -35,6 +38,8 @@ export function GymSettingsScreen() {
 
   const currentGym = ownedGyms.find((gym) => gym.id === activeOwnerGymId) ?? ownedGyms[0];
 
+  const gymImages = useMemo(() => (currentGym ? getGymImages(currentGym) : []), [currentGym?.settings]);
+
   const form = useForm<Form>({
     resolver: zodResolver(schema),
     defaultValues: { name: '', description: '' },
@@ -46,6 +51,33 @@ export function GymSettingsScreen() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentGym?.id]);
+
+  const handleAddImage = useCallback(
+    async (uri: string) => {
+      if (!currentGym) return;
+      await addGymImage(currentGym.id, uri);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.gyms.all });
+    },
+    [currentGym],
+  );
+
+  const handleRemoveImage = useCallback(
+    async (path: string) => {
+      if (!currentGym) return;
+      await removeGymImage(currentGym.id, path);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.gyms.all });
+    },
+    [currentGym],
+  );
+
+  const handleRemoveLogo = useCallback(async () => {
+    if (!currentGym) return;
+    if (currentGym.logo_url?.trim()) {
+      await deleteImageByUrl(currentGym.logo_url.trim());
+    }
+    await updateGym(currentGym.id, { logo_url: null });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.gyms.all });
+  }, [currentGym]);
 
   const submit = form.handleSubmit(async (values) => {
     if (!currentGym) return;
@@ -106,6 +138,12 @@ export function GymSettingsScreen() {
           />
 
           <Button title="Save changes" onPress={submit} loading={form.formState.isSubmitting} />
+        </Card>
+      ) : null}
+
+      {currentGym ? (
+        <Card>
+          <GymImagePicker images={gymImages} logoUrl={currentGym.logo_url} onAdd={handleAddImage} onRemove={handleRemoveImage} onRemoveLogo={handleRemoveLogo} />
         </Card>
       ) : (
         <Text className={text.loading}>No gym found.</Text>

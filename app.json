@@ -39,6 +39,12 @@
           "color": "#16a34a"
         }
       ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow GYM to show nearby gyms and personalize recommendations."
+        }
+      ],
       "expo-router"
     ]
   }

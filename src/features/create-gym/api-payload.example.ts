@@ -5,6 +5,8 @@ export const createGymApiPayloadExample: CreateGymInput = {
   description: 'Premium strength and conditioning facility for beginners and athletes.',
   logoUrl: 'https://cdn.example.com/gym-logos/iron-temple.png',
   gymType: 'Strength Training',
+  latitude: 18.5196,
+  longitude: 73.8553,
   address: {
     country: 'India',
     state: 'Maharashtra',
@@ -25,8 +27,8 @@ export const createGymApiPayloadExample: CreateGymInput = {
   facilities: ['Cardio', 'Weight Training', 'AC', 'Parking', 'WiFi', 'Personal Trainer'],
   ownerProfile: {
     name: 'Shozab Khan',
-    email: 'owner@irontemple.com',
     phone: '+919876543210',
+    email: 'owner@irontemple.com',
   },
 };
 

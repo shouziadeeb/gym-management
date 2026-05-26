@@ -1,6 +1,7 @@
 import type { User } from '@supabase/supabase-js';
 import type { Profile } from '@/types/models';
 
+import { buildDefaultDisplayName } from '@/domain/profiles';
 import { supabase } from '@/lib/supabase';
 
 function resolveAuthPhone(user: User, fallbackPhone?: string | null): string | null {
@@ -10,20 +11,6 @@ function resolveAuthPhone(user: User, fallbackPhone?: string | null): string | n
   const rawPhone = fallbackPhone ?? user.phone ?? metadataPhone ?? (emailPhone ? `+${emailPhone}` : null);
   const normalized = rawPhone?.trim() ?? '';
   return normalized.length > 0 ? normalized : null;
-}
-
-function toDigits(value: string | null | undefined): string {
-  return (value ?? '').replace(/\D/g, '');
-}
-
-function buildDefaultName(phone: string | null, userId: string): string {
-  const phoneDigits = toDigits(phone);
-  if (phoneDigits.length > 0) return `user${phoneDigits}`;
-
-  const fallbackDigits = toDigits(userId).slice(-8);
-  if (fallbackDigits.length > 0) return `user${fallbackDigits}`;
-
-  return `user${Date.now().toString().slice(-6)}`;
 }
 
 /**
@@ -42,7 +29,7 @@ export async function ensureProfileForUser(user: User): Promise<void> {
   const phone = resolveAuthPhone(user);
   const fullNameFromMetadata =
     typeof user.user_metadata?.full_name === 'string' ? user.user_metadata.full_name.trim() : '';
-  const generatedName = buildDefaultName(phone, user.id);
+  const generatedName = buildDefaultDisplayName(phone, user.id);
   const fullName = fullNameFromMetadata || generatedName;
 
   if (existing) {
@@ -83,7 +70,7 @@ export async function ensureProfileForUserWithPhone(user: User, fallbackPhone?: 
   const phone = resolveAuthPhone(user, fallbackPhone);
   const fullNameFromMetadata =
     typeof user.user_metadata?.full_name === 'string' ? user.user_metadata.full_name.trim() : '';
-  const generatedName = buildDefaultName(phone, user.id);
+  const generatedName = buildDefaultDisplayName(phone, user.id);
   const fullName = fullNameFromMetadata || generatedName;
 
   if (existing) {
@@ -125,13 +112,51 @@ export type UpdateMyProfileInput = {
   date_of_birth: string | null;
   fitness_goal: string | null;
   city: string | null;
+  home_latitude?: number | null;
+  home_longitude?: number | null;
+  home_location_label?: string | null;
   onboarding_completed: boolean;
 };
 
 export async function updateMyProfile(userId: string, payload: UpdateMyProfileInput): Promise<Profile> {
-  const { data, error } = await supabase.from('profiles').update(payload).eq('id', userId).select('*').single();
-  if (error) throw error;
-  return data as Profile;
+  const { data: updated, error: updateError } = await supabase
+    .from('profiles')
+    .update(payload)
+    .eq('id', userId)
+    .select('*')
+    .maybeSingle();
+
+  if (updateError) throw updateError;
+  if (updated) return updated as Profile;
+
+  // `.single()` fails with “Cannot coerce…” when UPDATE matches 0 rows. That happens when
+  // auth.users exists but profiles was never inserted (skipped trigger / legacy signup).
+  const insertRow = {
+    id: userId,
+    role: 'member' as const,
+    ...payload,
+    home_latitude: payload.home_latitude ?? null,
+    home_longitude: payload.home_longitude ?? null,
+    home_location_label: payload.home_location_label ?? null,
+  };
+
+  const { data: inserted, error: insertError } = await supabase.from('profiles').insert(insertRow).select('*').single();
+
+  if (!insertError && inserted) return inserted as Profile;
+
+  // Concurrent insert raced with us — row exists now; apply update once.
+  if (insertError?.code === '23505') {
+    const { data: retry, error: retryError } = await supabase
+      .from('profiles')
+      .update(payload)
+      .eq('id', userId)
+      .select('*')
+      .maybeSingle();
+    if (retryError) throw retryError;
+    if (retry) return retry as Profile;
+  }
+
+  throw insertError ?? new Error('Failed to save profile');
 }
 
 export async function promoteToGymOwner(userId: string): Promise<void> {

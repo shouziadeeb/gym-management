@@ -38,6 +38,15 @@ export function MemberHomeScreen() {
   const requestsQuery = useMemberRequests(userId);
   const isOwnerModeUser = ownedGyms.length > 0;
 
+  useEffect(() => {
+    if (activeMemberGymId && memberGyms.length > 0 && !memberGyms.some((g) => g.id === activeMemberGymId)) {
+      setActiveMemberGymId(memberGyms[0]?.id ?? null);
+    }
+    if (activeMemberGymId && memberGyms.length === 0) {
+      setActiveMemberGymId(null);
+    }
+  }, [memberGyms, activeMemberGymId, setActiveMemberGymId]);
+
   const membershipQuery = useQuery({
     queryKey: queryKeys.memberships.byUser(activeMemberGymId ?? undefined, userId),
     queryFn: () => fetchMembershipForUser(activeMemberGymId!, userId!),
@@ -56,7 +65,9 @@ export function MemberHomeScreen() {
   const leftGymRows = historyRows.filter((row) => row.left_at);
   const activeGymRows = historyRows.filter((row) => row.is_active && !row.left_at);
   const activeGymMembership = activeGymRows.find((row) => row.gym_id === activeMemberGymId) ?? activeGymRows[0] ?? null;
-  const currentGymId = activeMemberGymId ?? activeGymMembership?.gym_id ?? gym?.id ?? null;
+  const hasActiveGym = gym != null || (activeGymRows.length > 0 && memberGyms.length > 0);
+  const currentGymId = hasActiveGym ? (activeMemberGymId ?? activeGymMembership?.gym_id ?? gym?.id ?? null) : null;
+  const membershipCancelled = membership?.status === 'cancelled';
 
   useEffect(() => {
     if (!isFocused || !userId) return;
@@ -66,6 +77,7 @@ export function MemberHomeScreen() {
     });
     void queryClient.invalidateQueries({ queryKey: queryKeys.members.history(userId) });
     void queryClient.invalidateQueries({ queryKey: queryKeys.gyms.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.gyms.member(userId) });
   }, [isFocused, userId, activeMemberGymId]);
 
   async function respond(requestId: string, decision: 'accepted' | 'rejected') {
@@ -110,6 +122,7 @@ export function MemberHomeScreen() {
         queryClient.invalidateQueries({ queryKey: queryKeys.memberships.byUser(activeMemberGymId ?? undefined, userId) }),
         queryClient.invalidateQueries({ queryKey: queryKeys.members.history(userId) }),
         queryClient.invalidateQueries({ queryKey: queryKeys.gyms.all }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.gyms.member(userId) }),
       ]);
       await Promise.all([requestsQuery.refetch(), membershipQuery.refetch(), historyQuery.refetch()]);
     } finally {
@@ -160,7 +173,7 @@ export function MemberHomeScreen() {
             </Card>
           ) : null}
 
-          {membership ? (
+          {membership && !membershipCancelled ? (
             <>
               <MembershipStatusBadge status={membership.status} expiryDate={membership.expiry_date} />
               <Text className={`${layout.stackLg} ${text.listTitle}`}>Plan: {membership.plan_type}</Text>
@@ -172,6 +185,10 @@ export function MemberHomeScreen() {
                 Renewal reminders are sent 3 days before expiry via push notifications once your gym enables automations.
               </Text>
             </>
+          ) : membershipCancelled ? (
+            <Text className={`${layout.stackMd} ${text.caption}`}>
+              Your membership has been cancelled by the gym owner.
+            </Text>
           ) : (
             <Text className={`${layout.stackMd} ${text.caption}`}>
               You are joined to this gym. Membership plan/status has not been assigned yet.

@@ -1,20 +1,20 @@
 import { useMemo } from 'react';
 
+import { isProfileComplete } from '@/domain/profiles';
 import { useMyProfile } from '@/hooks/useMyProfile';
 
 export function useRequireCompletedProfile() {
   const profileQuery = useMyProfile();
 
-  const isProfileComplete = useMemo(() => {
-    const profile = profileQuery.data;
-    if (!profile) return false;
-    return Boolean(profile.onboarding_completed && profile.full_name?.trim() && profile.phone);
-  }, [profileQuery.data]);
+  const profileComplete = useMemo(
+    () => isProfileComplete(profileQuery.data),
+    [profileQuery.data],
+  );
 
   return {
     profile: profileQuery.data,
     isLoading: profileQuery.isLoading,
-    isProfileComplete,
+    isProfileComplete: profileComplete,
     error: profileQuery.error,
   };
 }

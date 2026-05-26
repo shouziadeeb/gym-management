@@ -7,56 +7,43 @@ import { z } from 'zod';
 
 import { updateMyProfile } from '@/api/profiles.api';
 import { queryClient } from '@/api/queries/client';
+import { queryKeys } from '@/api/queries/keys';
 import { Button } from '@/components/ui/Button';
+import { DatePickerField } from '@/components/ui/DatePickerField';
 import { Input } from '@/components/ui/Input';
+import { LocationPickerField } from '@/components/ui/LocationPickerField';
 import { Screen } from '@/components/ui/Screen';
+import { SelectField } from '@/components/ui/SelectField';
+import { buildDefaultDisplayName } from '@/domain/profiles';
+import { PROFILE_GENDER_OPTIONS, ageFromDateOfBirth } from '@/features/profile/labels';
 import { getErrorMessage } from '@/lib/errors';
 import { useMyProfile } from '@/hooks/useMyProfile';
 import { useAuthStore } from '@/store/auth.store';
 import { layout, text } from '@/theme/classes';
 
-const PROFILE_GENDERS = ['male', 'female', 'other', 'prefer_not_to_say'] as const;
-
-function toDigits(value: string | null | undefined): string {
-  return (value ?? '').replace(/\D/g, '');
-}
-
-function buildDefaultName(phone: string | null | undefined): string {
-  const digits = toDigits(phone);
-  if (digits.length > 0) return `user${digits}`;
-  return `user${Date.now().toString().slice(-6)}`;
-}
+const ONBOARDING_GENDERS = ['male', 'female', 'prefer_not_to_say'] as const;
 
 const profileSchema = z
   .object({
     fullName: z.string().trim().min(2, 'Full name is required'),
     phone: z.string().trim().min(5, 'Phone is required'),
-    gender: z.enum(PROFILE_GENDERS, { message: 'Select a valid gender' }),
-    age: z
-      .string()
-      .transform((v) => (v ?? '').trim()),
-    dateOfBirth: z
-      .string()
-      .transform((v) => (v ?? '').trim()),
-    city: z
-      .string()
-      .transform((v) => (v ?? '').trim()),
-    fitnessGoal: z
-      .string()
-      .transform((v) => (v ?? '').trim()),
+    gender: z.enum(ONBOARDING_GENDERS, { message: 'Select a valid gender' }),
+    dateOfBirth: z.string().transform((v) => (v ?? '').trim()),
+    city: z.string().transform((v) => (v ?? '').trim()),
+    fitnessGoal: z.string().transform((v) => (v ?? '').trim()),
+    homeLatitude: z.union([z.number(), z.null()]),
+    homeLongitude: z.union([z.number(), z.null()]),
+    homeLocationLabel: z.string().transform((v) => (v ?? '').trim()),
   })
   .superRefine((values, ctx) => {
-    if (values.age && !/^\d+$/.test(values.age)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['age'], message: 'Age must be a number' });
+    if (!values.dateOfBirth) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(values.dateOfBirth)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['dateOfBirth'], message: 'Select a valid date' });
+      return;
     }
-    if (values.age) {
-      const n = Number(values.age);
-      if (n < 13 || n > 100) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['age'], message: 'Age must be between 13 and 100' });
-      }
-    }
-    if (values.dateOfBirth && !/^\d{4}-\d{2}-\d{2}$/.test(values.dateOfBirth)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['dateOfBirth'], message: 'Use YYYY-MM-DD format' });
+    const age = ageFromDateOfBirth(values.dateOfBirth);
+    if (age == null || age < 13 || age > 100) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['dateOfBirth'], message: 'Age must be between 13 and 100' });
     }
   });
 
@@ -71,18 +58,34 @@ export function ProfileSetupScreen() {
   const defaults = useMemo<ProfileForm>(() => {
     const profile = profileQuery.data;
     const resolvedPhone = profile?.phone ?? sessionPhone ?? '';
-    const resolvedName = profile?.full_name?.trim() || buildDefaultName(resolvedPhone);
+    const resolvedName = profile?.full_name?.trim() || buildDefaultDisplayName(resolvedPhone, session?.user.id);
+
+    const rawGender = profile?.gender;
+    const gender: ProfileForm['gender'] =
+      rawGender === 'male' || rawGender === 'female' || rawGender === 'prefer_not_to_say'
+        ? rawGender
+        : 'prefer_not_to_say';
 
     return {
       fullName: resolvedName,
       phone: resolvedPhone,
-      gender: (profile?.gender ?? 'prefer_not_to_say') as ProfileForm['gender'],
-      age: profile?.age != null ? String(profile.age) : '',
+      gender,
       dateOfBirth: profile?.date_of_birth ?? '',
       city: profile?.city ?? '',
       fitnessGoal: profile?.fitness_goal ?? '',
+      homeLatitude: typeof profile?.home_latitude === 'number' ? profile.home_latitude : null,
+      homeLongitude: typeof profile?.home_longitude === 'number' ? profile.home_longitude : null,
+      homeLocationLabel: profile?.home_location_label ?? '',
     };
-  }, [profileQuery.data, sessionPhone]);
+  }, [profileQuery.data, sessionPhone, session?.user.id]);
+
+  const birthDateBounds = useMemo(() => {
+    const maximumDate = new Date();
+    maximumDate.setFullYear(maximumDate.getFullYear() - 13);
+    const minimumDate = new Date();
+    minimumDate.setFullYear(minimumDate.getFullYear() - 100);
+    return { maximumDate, minimumDate };
+  }, []);
 
   const form = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
@@ -94,18 +97,23 @@ export function ProfileSetupScreen() {
     if (!userId) return;
 
     try {
+      const computedAge = values.dateOfBirth ? ageFromDateOfBirth(values.dateOfBirth) : null;
+
       await updateMyProfile(userId, {
         full_name: values.fullName.trim(),
         phone: values.phone.trim(),
         gender: values.gender,
-        age: values.age ? Number(values.age) : null,
-        date_of_birth: values.dateOfBirth ?? null,
+        age: computedAge,
+        date_of_birth: values.dateOfBirth || null,
         city: values.city ?? null,
         fitness_goal: values.fitnessGoal ?? null,
+        home_latitude: values.homeLatitude,
+        home_longitude: values.homeLongitude,
+        home_location_label: values.homeLocationLabel.trim() || null,
         onboarding_completed: true,
       });
 
-      await queryClient.invalidateQueries({ queryKey: ['profile', userId] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.profile.me(userId) });
 
       if (typeof redirect === 'string' && redirect.length > 0) {
         router.replace(redirect as never);
@@ -148,26 +156,21 @@ export function ProfileSetupScreen() {
           control={form.control}
           name="gender"
           render={({ field: { onChange, value } }) => (
-            <Input
-              label="Gender (male/female/other/prefer_not_to_say)"
-              placeholder="prefer_not_to_say"
-              value={value}
-              onChangeText={(v) => onChange(v as ProfileForm['gender'])}
-            />
-          )}
-        />
-        <Controller
-          control={form.control}
-          name="age"
-          render={({ field: { onChange, value } }) => (
-            <Input label="Age (optional)" placeholder="24" value={value} onChangeText={onChange} keyboardType="number-pad" />
+            <SelectField label="Gender" value={value} options={PROFILE_GENDER_OPTIONS} onChange={onChange} />
           )}
         />
         <Controller
           control={form.control}
           name="dateOfBirth"
           render={({ field: { onChange, value } }) => (
-            <Input label="Date of birth (optional)" placeholder="1999-12-31" value={value} onChangeText={onChange} />
+            <DatePickerField
+              label="Date of birth (optional)"
+              value={value}
+              onChange={onChange}
+              placeholder="Select date of birth"
+              maximumDate={birthDateBounds.maximumDate}
+              minimumDate={birthDateBounds.minimumDate}
+            />
           )}
         />
         <Controller
@@ -176,6 +179,24 @@ export function ProfileSetupScreen() {
           render={({ field: { onChange, value } }) => (
             <Input label="City (optional)" placeholder="Delhi" value={value} onChangeText={onChange} autoCapitalize="sentences" />
           )}
+        />
+        <LocationPickerField
+          label="Home area (optional)"
+          description="Saves a privacy-safe pin so we can rank nearby gyms even if live GPS is disabled later."
+          latitude={form.watch('homeLatitude')}
+          longitude={form.watch('homeLongitude')}
+          locationLabel={form.watch('homeLocationLabel')}
+          disabled={form.formState.isSubmitting}
+          onCoordinatesChange={(next) => {
+            form.setValue('homeLatitude', next.latitude, { shouldValidate: true });
+            form.setValue('homeLongitude', next.longitude, { shouldValidate: true });
+            form.setValue('homeLocationLabel', next.label?.trim() ?? '', { shouldValidate: true });
+          }}
+          onClear={() => {
+            form.setValue('homeLatitude', null, { shouldValidate: true });
+            form.setValue('homeLongitude', null, { shouldValidate: true });
+            form.setValue('homeLocationLabel', '', { shouldValidate: true });
+          }}
         />
         <Controller
           control={form.control}
@@ -194,7 +215,6 @@ export function ProfileSetupScreen() {
         {form.formState.errors.phone?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.phone.message}</Text> : null}
         {form.formState.errors.fullName?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.fullName.message}</Text> : null}
         {form.formState.errors.gender?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.gender.message}</Text> : null}
-        {form.formState.errors.age?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.age.message}</Text> : null}
         {form.formState.errors.dateOfBirth?.message ? (
           <Text className={`mb-2 ${text.error}`}>{form.formState.errors.dateOfBirth.message}</Text>
         ) : null}

@@ -2,8 +2,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
-import { useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, Text, View } from 'react-native';
 
 import { queryClient } from '@/api/queries/client';
 import { queryKeys } from '@/api/queries/keys';
@@ -12,7 +12,9 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { Input } from '@/components/ui/Input';
+import { LocationPickerField } from '@/components/ui/LocationPickerField';
 import { Screen } from '@/components/ui/Screen';
+import { TimePickerField } from '@/components/ui/TimePickerField';
 import { useImageDeletion, useImageUpload } from '@/hooks';
 import {
   FACILITIES,
@@ -22,10 +24,13 @@ import {
   createGymStepFields,
   createGymSteps,
   createGymValidationSchema,
+  isResolvedOwnerContactComplete,
+  resolveGymOwnerFromAccount,
   toCreateGymInput,
   type CreateGymFormValues,
 } from '@/features/create-gym';
 import { getErrorMessage } from '@/lib/errors';
+import { useMyProfile } from '@/hooks/useMyProfile';
 import { useAuthIntentStore } from '@/store/auth-intent.store';
 import { useAppStore } from '@/store/app.store';
 import { useAuthStore } from '@/store/auth.store';
@@ -40,6 +45,12 @@ export function OnboardingScreen() {
   const [toast, setToast] = useState<string | null>(null);
   const { upload, isUploading, error: uploadError, resetError: clearUploadError } = useImageUpload();
   const { remove } = useImageDeletion();
+  const profileQuery = useMyProfile();
+
+  const resolvedOwner = useMemo(
+    () => (session?.user ? resolveGymOwnerFromAccount(profileQuery.data, session.user) : null),
+    [profileQuery.data, session?.user],
+  );
 
   const form = useForm<CreateGymFormValues>({
     resolver: zodResolver(createGymValidationSchema),
@@ -56,7 +67,15 @@ export function OnboardingScreen() {
     let uploadedLogoPath: string | undefined;
 
     try {
-      const payload = toCreateGymInput(values);
+      if (!resolvedOwner || !isResolvedOwnerContactComplete(resolvedOwner)) {
+        form.setError('root', {
+          message:
+            'Your profile needs a valid name and phone. Open Profile → My profile to update them before creating a gym.',
+        });
+        return;
+      }
+
+      const payload = toCreateGymInput(values, resolvedOwner);
       if (values.gymLogoUri?.trim()) {
         clearUploadError();
         const uploaded = await upload(
@@ -109,9 +128,26 @@ export function OnboardingScreen() {
   const selectedGymLogo = form.watch('gymLogoUri');
 
   async function goNextStep() {
-    const fields = createGymStepFields[activeStep.id];
-    const valid = await form.trigger(fields as Parameters<typeof form.trigger>[0], { shouldFocus: true });
-    if (!valid) return;
+    const fields = [...createGymStepFields[activeStep.id]];
+    if (fields.length > 0) {
+      const valid = await form.trigger(fields as Parameters<typeof form.trigger>[0], {
+        shouldFocus: true,
+      });
+      if (!valid) return;
+    }
+
+    if (activeStep.id === 'ownerInformation') {
+      if (profileQuery.isLoading) return;
+      if (!resolvedOwner || !isResolvedOwnerContactComplete(resolvedOwner)) {
+        form.setError('root', {
+          message:
+            'Complete your profile name and phone first (Profile → My profile), then continue here.',
+        });
+        return;
+      }
+      form.clearErrors('root');
+    }
+
     setStepIndex((value) => Math.min(value + 1, createGymSteps.length - 1));
   }
 
@@ -213,60 +249,26 @@ export function OnboardingScreen() {
 
         {activeStep.id === 'ownerInformation' ? (
           <Card title="Owner Information">
-            <Controller
-              control={form.control}
-              name="ownerName"
-              render={({ field: { onChange, value } }) => (
-                <Input label="Owner Name" placeholder="John Doe" value={value} onChangeText={onChange} autoCapitalize="sentences" />
-              )}
-            />
-            {form.formState.errors.ownerName?.message ? (
-              <Text className={`mb-2 ${text.error}`}>{form.formState.errors.ownerName.message}</Text>
-            ) : null}
-
-            <Controller
-              control={form.control}
-              name="ownerEmail"
-              render={({ field: { onChange, value } }) => (
-                <Input label="Email" placeholder="owner@gym.com" value={value} onChangeText={onChange} autoCapitalize="none" />
-              )}
-            />
-            {form.formState.errors.ownerEmail?.message ? (
-              <Text className={`mb-2 ${text.error}`}>{form.formState.errors.ownerEmail.message}</Text>
-            ) : null}
-
-            <Controller
-              control={form.control}
-              name="ownerPhone"
-              render={({ field: { onChange, value } }) => (
-                <Input label="Phone Number" placeholder="+919876543210" value={value} onChangeText={onChange} keyboardType="phone-pad" />
-              )}
-            />
-            {form.formState.errors.ownerPhone?.message ? (
-              <Text className={`mb-2 ${text.error}`}>{form.formState.errors.ownerPhone.message}</Text>
-            ) : null}
-
-            <Controller
-              control={form.control}
-              name="password"
-              render={({ field: { onChange, value } }) => (
-                <Input label="Password" placeholder="******" value={value} onChangeText={onChange} secureTextEntry />
-              )}
-            />
-            {form.formState.errors.password?.message ? (
-              <Text className={`mb-2 ${text.error}`}>{form.formState.errors.password.message}</Text>
-            ) : null}
-
-            <Controller
-              control={form.control}
-              name="confirmPassword"
-              render={({ field: { onChange, value } }) => (
-                <Input label="Confirm Password" placeholder="******" value={value} onChangeText={onChange} secureTextEntry />
-              )}
-            />
-            {form.formState.errors.confirmPassword?.message ? (
-              <Text className={`mb-2 ${text.error}`}>{form.formState.errors.confirmPassword.message}</Text>
-            ) : null}
+            {profileQuery.isLoading ? (
+              <View className="items-center py-6">
+                <ActivityIndicator accessibilityLabel="Loading profile" />
+                <Text className={`mt-4 ${text.caption}`}>Loading your account…</Text>
+              </View>
+            ) : (
+              <>
+                <Text className={`mb-4 ${text.caption}`}>
+                  Name and phone are taken from your account (saved during onboarding). Use Profile → My profile if you need
+                  to change them.
+                </Text>
+                <Text className={`mb-1 ${text.label}`}>Name</Text>
+                <Text className={`mb-3 ${text.bodySm}`}>{resolvedOwner?.name?.trim() ? resolvedOwner.name : '—'}</Text>
+                <Text className={`mb-1 ${text.label}`}>Phone</Text>
+                <Text className={`mb-3 ${text.bodySm}`}>{resolvedOwner?.phone?.trim() ? resolvedOwner.phone : '—'}</Text>
+                {resolvedOwner && !isResolvedOwnerContactComplete(resolvedOwner) ? (
+                  <Text className={`${text.warning}`}>Add a valid name and phone in your profile before you continue.</Text>
+                ) : null}
+              </>
+            )}
           </Card>
         ) : null}
 
@@ -282,14 +284,58 @@ export function OnboardingScreen() {
             {form.formState.errors.fullAddress?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.fullAddress.message}</Text> : null}
             <Controller control={form.control} name="pincode" render={({ field: { onChange, value } }) => <Input label="Pincode" placeholder="411001" value={value} onChangeText={onChange} keyboardType="number-pad" />} />
             {form.formState.errors.pincode?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.pincode.message}</Text> : null}
+            <LocationPickerField
+              label="Pin your gym on the map"
+              description="Required for nearby search. Visit the entrance and tap GPS, or match the address lines above."
+              buildAddressGeocodeQuery={() => {
+                const fields = form.getValues();
+                const joined = [fields.fullAddress, fields.city, fields.state, fields.country, fields.pincode]
+                  .map((part) => (part ?? '').trim())
+                  .filter(Boolean)
+                  .join(', ')
+                  .trim();
+                return joined.length >= 6 ? joined : null;
+              }}
+              latitude={form.watch('gymLatitude')}
+              longitude={form.watch('gymLongitude')}
+              locationLabel={form.watch('gymLocationLabel')}
+              disabled={form.formState.isSubmitting}
+              errorMessage={
+                typeof form.formState.errors.gymLatitude?.message === 'string'
+                  ? form.formState.errors.gymLatitude.message
+                  : undefined
+              }
+              onCoordinatesChange={(next) => {
+                form.setValue('gymLatitude', next.latitude, { shouldValidate: true });
+                form.setValue('gymLongitude', next.longitude, { shouldValidate: true });
+                form.setValue('gymLocationLabel', next.label?.trim() ?? '', { shouldValidate: true });
+              }}
+              onClear={() => {
+                form.setValue('gymLatitude', null, { shouldValidate: true });
+                form.setValue('gymLongitude', null, { shouldValidate: true });
+                form.setValue('gymLocationLabel', '', { shouldValidate: true });
+              }}
+            />
           </Card>
         ) : null}
 
         {activeStep.id === 'gymTiming' ? (
           <Card title="Gym Timing">
-            <Controller control={form.control} name="openingTime" render={({ field: { onChange, value } }) => <Input label="Opening Time" placeholder="06:00" value={value} onChangeText={onChange} />} />
+            <Controller
+              control={form.control}
+              name="openingTime"
+              render={({ field: { onChange, value } }) => (
+                <TimePickerField label="Opening Time" value={value} onChange={onChange} />
+              )}
+            />
             {form.formState.errors.openingTime?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.openingTime.message}</Text> : null}
-            <Controller control={form.control} name="closingTime" render={({ field: { onChange, value } }) => <Input label="Closing Time" placeholder="22:00" value={value} onChangeText={onChange} />} />
+            <Controller
+              control={form.control}
+              name="closingTime"
+              render={({ field: { onChange, value } }) => (
+                <TimePickerField label="Closing Time" value={value} onChange={onChange} />
+              )}
+            />
             {form.formState.errors.closingTime?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.closingTime.message}</Text> : null}
             <Text className={`mb-2 ${text.label}`}>Working Days</Text>
             <View className="mb-4 flex-row flex-wrap gap-2">
@@ -349,7 +395,11 @@ export function OnboardingScreen() {
 
           {stepIndex < createGymSteps.length - 1 ? (
             <View className="flex-1">
-              <Button title="Next" onPress={goNextStep} />
+              <Button
+                title="Next"
+                onPress={goNextStep}
+                disabled={activeStep.id === 'ownerInformation' && profileQuery.isLoading}
+              />
             </View>
           ) : (
             <View className="flex-1">

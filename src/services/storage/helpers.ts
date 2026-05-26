@@ -1,3 +1,4 @@
+import { readUriAsArrayBuffer } from '@/lib/read-uri-bytes';
 import { ALLOWED_IMAGE_MIME_TYPES, MAX_IMAGE_SIZE_BYTES, type StorageFolder, type UploadableImage } from '@/services/storage/types';
 
 const FILE_EXTENSION_BY_MIME: Record<string, string> = {
@@ -53,12 +54,7 @@ export function validateImageFile(file: UploadableImage): void {
 }
 
 export async function toArrayBufferFromUri(uri: string): Promise<ArrayBuffer> {
-  const response = await fetch(uri);
-  if (!response.ok) {
-    throw new Error('Failed to read image file before upload.');
-  }
-
-  return response.arrayBuffer();
+  return readUriAsArrayBuffer(uri);
 }
 
 export function extensionFromMimeType(mimeType: string): string {

@@ -7,3 +7,14 @@ body,
 #root {
   @apply bg-slate-50 dark:bg-slate-950;
 }
+
+/* RN Web (Explore FlatList): remove persistent scrollbar gutter; scrolling still works. */
+#exploreMarketplaceFlatListScroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+#exploreMarketplaceFlatListScroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}

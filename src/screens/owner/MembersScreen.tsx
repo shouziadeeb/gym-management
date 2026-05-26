@@ -387,35 +387,41 @@ export function MembersScreen() {
               key={member.membership_link_id}
               member={member}
               action={
-                <View className="gap-2">
-                  <Button
-                    title="Renew"
-                    variant="ghost"
-                    onPress={() => {
-                      if (!member.member_id) return;
-                      setPayAmount('0');
-                      void ensureMembershipAndRenew({
-                        memberId: member.member_id,
-                        membershipId: member.membership_id,
-                        fallbackPlanType: member.plan_type,
-                      });
-                    }}
-                  />
-                  <Button
-                    title="Pay"
-                    variant="ghost"
-                    onPress={() => {
-                      if (!member.member_id) return;
-                      setPayAmount('49');
-                      setPayTarget({ userId: member.member_id, membershipId: member.membership_id ?? null });
-                    }}
-                  />
-                  <Button
-                    title="Remove"
-                    variant="danger"
-                    onPress={() => setRemoveTarget({ userId: member.member_id, label: member.member_name ?? member.member_phone ?? 'Member' })}
-                  />
-                </View>
+                <>
+                  <View className="flex-1">
+                    <Button
+                      title="Renew"
+                      variant="ghost"
+                      onPress={() => {
+                        if (!member.member_id) return;
+                        setPayAmount('0');
+                        void ensureMembershipAndRenew({
+                          memberId: member.member_id,
+                          membershipId: member.membership_id,
+                          fallbackPlanType: member.plan_type,
+                        });
+                      }}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Button
+                      title="Pay"
+                      variant="ghost"
+                      onPress={() => {
+                        if (!member.member_id) return;
+                        setPayAmount('49');
+                        setPayTarget({ userId: member.member_id, membershipId: member.membership_id ?? null });
+                      }}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Button
+                      title="Remove"
+                      variant="danger"
+                      onPress={() => setRemoveTarget({ userId: member.member_id, label: member.member_name ?? member.member_phone ?? 'Member' })}
+                    />
+                  </View>
+                </>
               }
             />
           ))}

@@ -21,15 +21,16 @@ function GlobalBackButton() {
 
   const firstSegment = segments[0];
   const isTabsRoute = firstSegment === '(tabs)';
-  const isRootIndex = segments.length === 0;
+  const isRootIndex = !firstSegment;
 
   if (isTabsRoute || isRootIndex) return null;
 
   return (
     <View
       style={{
-        paddingTop: insets.top + 4,
+        paddingTop: insets.top,
         paddingHorizontal: 12,
+        paddingBottom: 4,
         backgroundColor: colors.background,
       }}
     >

@@ -4,6 +4,10 @@ export const queryKeys = {
   gyms: {
     all: ['gyms'] as const,
     publicList: ['gyms', 'public'] as const,
+    discoveryCatalog: (limit?: number) => ['gyms', 'discovery', 'catalog', limit ?? 'default'] as const,
+    exploreInfinite: (filtersKey: string) => ['gyms', 'discovery', 'explore', filtersKey] as const,
+    nearestBatch: (coordsKey?: string | null) => ['gyms', 'discovery', 'nearest', coordsKey ?? 'anon'] as const,
+    gymsByIds: (idsHash: string) => ['gyms', 'discovery', 'byIds', idsHash] as const,
     owned: (userId?: string) => ['gyms', 'owned', userId] as const,
     member: (userId?: string) => ['gyms', 'member', userId] as const,
     byId: (gymId?: string) => ['gyms', 'detail', gymId] as const,
@@ -25,6 +29,13 @@ export const queryKeys = {
     byUser: (gymId?: string, userId?: string) => ['membership', gymId, userId] as const,
     byGym: (gymId?: string) => ['membership', 'gym', gymId] as const,
     renewalsByMember: (gymId?: string, memberId?: string) => ['membership', 'renewals', gymId, memberId] as const,
+  },
+  profile: {
+    me: (userId?: string) => ['profile', userId] as const,
+  },
+  discovery: {
+    signals: (userId?: string) => ['discovery', 'signals', userId] as const,
+    preferences: (userId?: string) => ['discovery', 'preferences', userId] as const,
   },
   config: {
     staleTime: QUERY_STALE_TIME_MS,

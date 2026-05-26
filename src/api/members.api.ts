@@ -97,6 +97,15 @@ export async function removeMemberFromGym(gymId: string, userId: string) {
     .eq('user_id', userId);
 
   if (error) throw error;
+
+  const { error: membershipError } = await supabase
+    .from('memberships')
+    .update({ status: 'cancelled' })
+    .eq('gym_id', gymId)
+    .eq('user_id', userId)
+    .in('status', ['active', 'expiring_soon']);
+
+  if (membershipError) throw membershipError;
 }
 
 export type MemberGymHistoryRow = {

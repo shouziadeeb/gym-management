@@ -14,6 +14,9 @@ export type Profile = {
   date_of_birth: string | null;
   fitness_goal: string | null;
   city: string | null;
+  home_latitude?: number | null;
+  home_longitude?: number | null;
+  home_location_label?: string | null;
   onboarding_completed: boolean;
   role: UserRole;
   account_type: AccountType;
@@ -33,6 +36,15 @@ export type Gym = {
   settings: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  rating_avg?: number | null;
+  review_count?: number | null;
+  active_member_count?: number | null;
+  popularity_score?: number | null;
+  trending_score?: number | null;
+  categories?: string[] | null;
+  is_active?: boolean | null;
 };
 
 export type GymSettings = {

@@ -1,95 +1,86 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
 import { router } from 'expo-router';
 import { Text, View } from 'react-native';
 
-import { fetchPublicGyms } from '@/api/gyms.api';
-import { queryKeys } from '@/api/queries/keys';
-import { GymLogo } from '@/components/gym/GymLogo';
-import { Button } from '@/components/ui/Button';
+import { GymDiscoverCard } from '@/components/discovery/GymDiscoverCard';
+import { GymDiscoverCardSkeleton } from '@/components/discovery/GymDiscoverCardSkeleton';
+import { PromoBannerCarousel } from '@/components/discovery/PromoBannerCarousel';
+import { QuickSearchField } from '@/components/discovery/QuickSearchField';
+import { SectionHeader } from '@/components/discovery/SectionHeader';
 import { Card } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
+import { useHomeDiscovery } from '@/hooks/useHomeDiscovery';
 import { layout, text } from '@/theme/classes';
-import { compactList, formatInrFromCents, parseGymSettings } from '@/utils/gym-settings';
 
 export function HomeScreen() {
-  const [query, setQuery] = useState('');
+  const { gyms, loading, error, refresh, isRefetching, geo } = useHomeDiscovery();
+  const [homeQuery, setHomeQuery] = useState('');
 
-  const gymsQuery = useQuery({
-    queryKey: queryKeys.gyms.publicList,
-    queryFn: fetchPublicGyms,
-  });
+  const locationCaption = useMemo(() => {
+    if (geo.coords) {
+      return 'Location on — gyms are ranked with your live position. Use Explore for filters and sorts.';
+    }
 
-  const gyms = (gymsQuery.data ?? []).filter((gym) => {
-    const value = query.trim().toLowerCase();
-    if (!value) return true;
-    return gym.name.toLowerCase().includes(value) || (gym.description ?? '').toLowerCase().includes(value);
-  });
+    return 'Location off — enable access for distance labels. Use Explore for filters and sorts.';
+  }, [geo.coords]);
+
+  const navigateExplore = (payload: Record<string, string>) => {
+    router.push({ pathname: '/(tabs)/explore', params: payload });
+  };
 
   return (
-    <Screen scroll>
+    <Screen scroll refreshing={isRefetching} onRefresh={refresh}>
       <View className={layout.screenTop}>
-        <Text className={text.screenTitle}>Find your next gym</Text>
-        <Text className={`${layout.stack} ${text.screenSubtitle}`}>
-          Explore gyms, trainers, and plans before creating an account.
-        </Text>
+        <Text className={text.screenTitleLg}>Training dashboard</Text>
+        
+        <Text className={`${layout.stackSm} ${text.caption}`}>{locationCaption}</Text>
       </View>
 
-      <View className={layout.sectionLg}>
-        <Input label="Search gyms" placeholder="Search by name or keyword" value={query} onChangeText={setQuery} />
+     
+
+      <View className={layout.sectionXl}>
+        <SectionHeader title="Seasonal spotlight"  />
+        <PromoBannerCarousel />
       </View>
 
-      <Card title="Featured">
-        <Text className={text.caption}>Top gyms from your area appear here. Use Explore for advanced browsing and filters.</Text>
-      </Card>
+      {loading ? (
+        <View className={layout.sectionLg}>
+          {Array.from({ length: 4 }).map((_, slot) => (
+            <GymDiscoverCardSkeleton key={`home-skel-${slot}`} />
+          ))}
+        </View>
+      ) : null}
 
-      {gymsQuery.isLoading ? <Text className={text.loading}>Loading gyms…</Text> : null}
-      {gymsQuery.error ? (
+      {error ? (
         <Card>
-          <Text className={text.error}>Could not load gyms. Check Supabase RLS/policies for public read access.</Text>
+          <Text className={text.error}>
+            We couldn&apos;t load gyms. Apply the newest Supabase migration (gym discovery columns), then pull to refresh.
+          </Text>
         </Card>
       ) : null}
 
-      {gyms.map((gym) => (
-        <Card key={gym.id}>
-          <View className="mb-3">
-            <GymLogo logoUrl={gym.logo_url} gymName={gym.name} size="md" />
-          </View>
-          <Text className={text.listTitle}>{gym.name}</Text>
-          {gym.description ? <Text className={`${layout.stackSm} ${text.caption}`}>{gym.description}</Text> : null}
+      {!loading && !error ? (
+        <View className={layout.sectionXl}>
+          <SectionHeader
+            title="All gyms"
+            subtitle={
+              gyms.length > 0
+                ? `${gyms.length} venue${gyms.length === 1 ? '' : 's'} — personalized order. Open Explore to filter or sort.`
+                : 'No gyms in the catalog yet.'
+            }
+          />
+          {gyms.map((gym) => (
+            <GymDiscoverCard key={gym.id} gym={gym} onPress={() => router.push(`/gym/${gym.id}`)} />
+          ))}
+        </View>
+      ) : null}
 
-          {(() => {
-            const settings = parseGymSettings(gym.settings);
-            const monthly = formatInrFromCents(settings.membershipPlans?.monthlyFeeCents);
-            const quarterly = formatInrFromCents(settings.membershipPlans?.quarterlyFeeCents);
-            const yearly = formatInrFromCents(settings.membershipPlans?.yearlyFeeCents);
-            const timings =
-              settings.timings?.openingTime && settings.timings?.closingTime
-                ? `${settings.timings.openingTime} - ${settings.timings.closingTime}`
-                : 'N/A';
-            const facilities = compactList(settings.facilities, 4);
-
-            return (
-              <View className={layout.stackMd}>
-                <Text className={text.bodySm}>Timings: {timings}</Text>
-                <Text className={`${layout.stackSm} ${text.bodySm}`}>Facilities: {facilities}</Text>
-                <Text className={`${layout.stackSm} ${text.bodySm}`}>
-                  Price: Monthly {monthly} • Quarterly {quarterly} • Yearly {yearly}
-                </Text>
-              </View>
-            );
-          })()}
-
-          <View className={layout.stackMd}>
-            <Button title="View details" variant="ghost" onPress={() => router.push(`/gym/${gym.id}`)} />
-          </View>
-        </Card>
-      ))}
-
-      {!gymsQuery.isLoading && !gymsQuery.error && gyms.length === 0 ? (
+      {!loading && !error && gyms.length === 0 ? (
         <Card>
-          <Text className={text.caption}>No gyms found yet. Try changing your search.</Text>
+          <Text className={text.caption}>
+            Seed gyms with latitude, longitude, ratings, categories, and membership plans — they will appear here
+            automatically.
+          </Text>
         </Card>
       ) : null}
     </Screen>

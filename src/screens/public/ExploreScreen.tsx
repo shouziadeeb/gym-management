@@ -1,85 +1,258 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { router } from 'expo-router';
-import { Text, View } from 'react-native';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  Platform,
+  Pressable,
+  RefreshControl,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 
-import { fetchPublicGyms } from '@/api/gyms.api';
-import { queryKeys } from '@/api/queries/keys';
-import { GymLogo } from '@/components/gym/GymLogo';
-import { Button } from '@/components/ui/Button';
+import { CategoryFilterRow } from '@/components/discovery/CategoryFilterRow';
+import { ChipToggleRow } from '@/components/discovery/ChipToggleRow';
+import { DiscoveryEmptyState } from '@/components/discovery/DiscoveryEmptyState';
+import { GymDiscoverCard } from '@/components/discovery/GymDiscoverCard';
+import { GymDiscoverCardSkeleton } from '@/components/discovery/GymDiscoverCardSkeleton';
+import { SelectField } from '@/components/ui/SelectField';
 import { Card } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Screen } from '@/components/ui/Screen';
-import { layout, text } from '@/theme/classes';
-import { compactList, formatInrFromCents, parseGymSettings } from '@/utils/gym-settings';
+import { Screen, useScreenScrollBottomPadding } from '@/components/ui/Screen';
+import {
+  DEFAULT_EXPLORE_SORT,
+  EXPLORE_SEARCH_DEBOUNCE_MS,
+  EXPLORE_SORT_LABELS,
+  EXPLORE_SORT_VALUES,
+  PRICE_PRESETS_INR_MONTHLY_MIN,
+  RATING_FILTERS,
+  parseExploreSortMode,
+  type ExploreSortMode,
+} from '@/constants/gym-discovery';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useExploreMarketplace } from '@/hooks/useExploreMarketplace';
+import { appendSearchHistoryTerm } from '@/services/discovery/preferences.storage';
+import { layout, surfaces, text } from '@/theme/classes';
+import { inputSurface } from '@/theme/styles';
+import { useTheme } from '@/hooks/useTheme';
+import type { GymCardPresentation } from '@/domain/discovery/types';
+
+function firstParam(raw: string | string[] | undefined): string | undefined {
+  if (typeof raw === 'string') return raw.trim() || undefined;
+  if (Array.isArray(raw) && typeof raw[0] === 'string') return raw[0].trim() || undefined;
+  return undefined;
+}
+
+type RouteParams = {
+  q?: string | string[];
+  sort?: string | string[];
+  category?: string | string[];
+  price?: string | string[];
+};
 
 export function ExploreScreen() {
-  const [query, setQuery] = useState('');
+  const { colors } = useTheme();
+  const scrollBottomPadding = useScreenScrollBottomPadding();
+  const params = useLocalSearchParams<RouteParams>();
 
-  const gymsQuery = useQuery({
-    queryKey: queryKeys.gyms.publicList,
-    queryFn: fetchPublicGyms,
+  const [search, setSearch] = useState('');
+  const [categories, setCategories] = useState<string[]>([]);
+  const [ratingPresetId, setRatingPresetId] = useState('any');
+  const [pricePresetId, setPricePresetId] = useState('any');
+  const [sort, setSort] = useState<ExploreSortMode>(DEFAULT_EXPLORE_SORT);
+
+  useEffect(() => {
+    const nextQuery = firstParam(params.q);
+    if (nextQuery) setSearch(nextQuery);
+
+    setSort(parseExploreSortMode(firstParam(params.sort)));
+
+    const incomingCategory = firstParam(params.category);
+    setCategories(incomingCategory ? [incomingCategory] : []);
+
+    const priceTag = firstParam(params.price);
+    if (priceTag && PRICE_PRESETS_INR_MONTHLY_MIN.some((tier) => tier.id === priceTag)) {
+      setPricePresetId(priceTag);
+    } else if (!priceTag) {
+      setPricePresetId('any');
+    }
+  }, [params.q, params.sort, params.category, params.price]);
+
+  const debouncedSearch = useDebouncedValue(search, EXPLORE_SEARCH_DEBOUNCE_MS);
+
+  useEffect(() => {
+    const term = debouncedSearch.trim();
+    if (term.length < 3) return;
+    void appendSearchHistoryTerm(term);
+  }, [debouncedSearch]);
+
+  const ratingMin = useMemo(() => RATING_FILTERS.find((tier) => tier.id === ratingPresetId)?.min ?? 0, [ratingPresetId]);
+
+  const monthlyFeeMax = useMemo(() => {
+    return PRICE_PRESETS_INR_MONTHLY_MIN.find((tier) => tier.id === pricePresetId)?.maxCents ?? null;
+  }, [pricePresetId]);
+
+  const explore = useExploreMarketplace({
+    search,
+    debouncedSearch,
+    categories,
+    ratingMin,
+    monthlyFeeMaxCents: monthlyFeeMax,
+    sort,
   });
 
-  const gyms = (gymsQuery.data ?? []).filter((gym) => {
-    const value = query.trim().toLowerCase();
-    if (!value) return true;
-    return gym.name.toLowerCase().includes(value) || (gym.description ?? '').toLowerCase().includes(value);
-  });
+  const sortOptions = useMemo(
+    () => EXPLORE_SORT_VALUES.map((value) => ({ value, label: EXPLORE_SORT_LABELS[value] })),
+    [],
+  );
 
-  return (
-    <Screen scroll>
-      <Text className={`${layout.screenTop} ${text.screenTitle}`}>Explore gyms</Text>
+  const toggleCategory = useCallback((slug: string) => {
+    setCategories((existing) =>
+      existing.includes(slug) ? existing.filter((entry) => entry !== slug) : [...existing, slug],
+    );
+  }, []);
+
+  const clearFilters = useCallback(() => {
+    setSearch('');
+    setCategories([]);
+    setRatingPresetId('any');
+    setPricePresetId('any');
+    setSort(DEFAULT_EXPLORE_SORT);
+    router.replace('/(tabs)/explore');
+  }, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: GymCardPresentation }) => (
+      <GymDiscoverCard gym={item} onPress={() => router.push(`/gym/${item.id}`)} />
+    ),
+    [],
+  );
+
+  const header = (
+    <View className={layout.screenTop}>
+      <Text className={text.screenTitle}>Explore gyms</Text>
       <Text className={`${layout.stack} ${text.screenSubtitle}`}>
-        Search and discover gyms by name, category, and location-ready metadata.
+        Deep marketplace search with layered filters, deterministic sorts, and scalable Supabase queries.
       </Text>
+      <Text className={`${layout.stackMd} ${text.caption}`}>{`${explore.totalMatched} gyms after local filters`}</Text>
 
-      <View className={layout.sectionLg}>
-        <Input label="Search gyms" placeholder="Search by name or keyword" value={query} onChangeText={setQuery} />
-      </View>
-
-      {gymsQuery.isLoading ? <Text className={text.loading}>Loading gyms…</Text> : null}
-      {gymsQuery.error ? (
-        <Card>
-          <Text className={text.error}>Could not load gyms. Check Supabase RLS/policies for public read access.</Text>
-        </Card>
+      {explore.distanceFallbackActive ? (
+        <View className={layout.stackMd}>
+          <Card>
+            <Text className={text.bodySm}>
+              Enable device location to unlock true nearest sorting. Right now we approximate with popularity.
+            </Text>
+          </Card>
+        </View>
       ) : null}
 
-      {gyms.map((gym) => (
-        <Card key={gym.id}>
-          <View className="mb-3">
-            <GymLogo logoUrl={gym.logo_url} gymName={gym.name} size="md" />
-          </View>
-          <Text className={text.listTitle}>{gym.name}</Text>
-          {gym.description ? <Text className={`${layout.stackSm} ${text.caption}`}>{gym.description}</Text> : null}
+      <Text className={`${layout.stack} ${text.label}`}>Search</Text>
+      <TextInput
+        placeholder="Search name, category, or keyword"
+        placeholderTextColor={colors.placeholder}
+        className={surfaces.input}
+        style={inputSurface(colors)}
+        value={search}
+        onChangeText={setSearch}
+        autoCapitalize="none"
+      />
 
-          {(() => {
-            const settings = parseGymSettings(gym.settings);
-            const monthly = formatInrFromCents(settings.membershipPlans?.monthlyFeeCents);
-            const quarterly = formatInrFromCents(settings.membershipPlans?.quarterlyFeeCents);
-            const yearly = formatInrFromCents(settings.membershipPlans?.yearlyFeeCents);
-            const timings =
-              settings.timings?.openingTime && settings.timings?.closingTime
-                ? `${settings.timings.openingTime} - ${settings.timings.closingTime}`
-                : 'N/A';
-            const facilities = compactList(settings.facilities, 4);
+      <View className={layout.stackMd}>
+        <SelectField label="Sort gyms" options={sortOptions} value={sort} onChange={setSort} />
+      </View>
 
-            return (
-              <View className={layout.stackMd}>
-                <Text className={text.bodySm}>Timings: {timings}</Text>
-                <Text className={`${layout.stackSm} ${text.bodySm}`}>Facilities: {facilities}</Text>
-                <Text className={`${layout.stackSm} ${text.bodySm}`}>
-                  Price: Monthly {monthly} • Quarterly {quarterly} • Yearly {yearly}
-                </Text>
-              </View>
-            );
-          })()}
+      <Text className={`${layout.stackMd} ${text.label}`}>Categories</Text>
+      <CategoryFilterRow options={explore.categoryOptions} selected={categories} onToggle={toggleCategory} />
 
-          <View className={layout.stackMd}>
-            <Button title="View details" variant="ghost" onPress={() => router.push(`/gym/${gym.id}`)} />
-          </View>
-        </Card>
-      ))}
+      <Text className={`${layout.stackMd} ${text.label}`}>Minimum rating</Text>
+      <ChipToggleRow
+        options={RATING_FILTERS}
+        selectedId={ratingPresetId}
+        onSelect={(next) => setRatingPresetId(next === ratingPresetId ? 'any' : next)}
+      />
+
+      <Text className={`${layout.stackMd} ${text.label}`}>Monthly budget</Text>
+      <ChipToggleRow
+        options={PRICE_PRESETS_INR_MONTHLY_MIN}
+        selectedId={pricePresetId}
+        onSelect={(next) => setPricePresetId(next === pricePresetId ? 'any' : next)}
+      />
+
+      <Pressable onPress={clearFilters} accessibilityRole="button">
+        <Text className={`${layout.stackLg} ${text.link}`}>Reset filters</Text>
+      </Pressable>
+    </View>
+  );
+
+  if (explore.isInitialLoading && !explore.cards.length) {
+    return (
+      <Screen scroll>
+        {header}
+        <View>
+          <GymDiscoverCardSkeleton />
+          <GymDiscoverCardSkeleton />
+        </View>
+      </Screen>
+    );
+  }
+
+  if (explore.error && !explore.cards.length) {
+    return (
+      <Screen scroll>
+        {header}
+        <DiscoveryEmptyState
+          title="We could not load gyms"
+          subtitle="Validate Supabase migrations, RLS policies, and network connectivity."
+          actionLabel="Try again"
+          onActionPress={() => explore.refetch()}
+        />
+      </Screen>
+    );
+  }
+
+  const listScrollStyle =
+    Platform.OS === 'web'
+      ? ({
+          flex: 1,
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+        } as const)
+      : { flex: 1 };
+
+  return (
+    <Screen>
+      <FlatList<GymCardPresentation>
+        data={explore.cards}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        nativeID={Platform.OS === 'web' ? 'exploreMarketplaceFlatListScroll' : undefined}
+        style={listScrollStyle}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={header}
+        contentContainerStyle={{ paddingBottom: scrollBottomPadding }}
+        ItemSeparatorComponent={() => <View className={layout.section} />}
+        refreshControl={<RefreshControl refreshing={explore.isRefetching} onRefresh={explore.refetch} />}
+        onEndReachedThreshold={0.45}
+        onEndReached={() => explore.fetchNext()}
+        ListEmptyComponent={
+          explore.isInitialLoading ? null : (
+            <DiscoveryEmptyState
+              title="No gyms match"
+              subtitle="Adjust filters — especially categories or budget — then try again."
+              actionLabel="Clear filters"
+              onActionPress={clearFilters}
+            />
+          )
+        }
+        ListFooterComponent={
+          explore.fetchNextBusy ? (
+            <View className="py-10">
+              <ActivityIndicator accessibilityLabel="Loading more gyms" />
+            </View>
+          ) : null
+        }
+      />
     </Screen>
   );
 }
+

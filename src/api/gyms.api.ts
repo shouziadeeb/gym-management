@@ -77,9 +77,13 @@ export type CreateGymInput = {
   facilities?: string[];
   ownerProfile?: {
     name: string;
-    email: string;
     phone: string;
+    /** Omitted for phone-only accounts or synthetic auth emails. */
+    email?: string | null;
   };
+  /** WGS84 — enables nearby discovery in the marketplace. */
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 export async function createGym(input: CreateGymInput): Promise<Gym> {
@@ -109,6 +113,10 @@ export async function createGym(input: CreateGymInput): Promise<Gym> {
         ? `${input.address.fullAddress}, ${input.address.city}, ${input.address.state}, ${input.address.country} - ${input.address.pincode}`
         : null,
       slug: buildGymSlug(name),
+      latitude:
+        typeof input.latitude === 'number' && Number.isFinite(input.latitude) ? input.latitude : null,
+      longitude:
+        typeof input.longitude === 'number' && Number.isFinite(input.longitude) ? input.longitude : null,
       settings: {
         gymType: input.gymType ?? null,
         timings: input.timings ?? null,
@@ -144,7 +152,7 @@ export async function createGym(input: CreateGymInput): Promise<Gym> {
   throw lastError ?? new Error('Could not create gym. Please try again.');
 }
 
-export async function updateGym(gymId: string, patch: Partial<Pick<Gym, 'name' | 'description' | 'address'>>) {
+export async function updateGym(gymId: string, patch: Partial<Pick<Gym, 'name' | 'description' | 'address' | 'logo_url'>>) {
   const { data, error } = await supabase.from('gyms').update(patch).eq('id', gymId).select('*').single();
   if (error) throw error;
   return data as Gym;
