@@ -1,7 +1,8 @@
-import { addMonths } from 'date-fns';
-
+import { upsertMembershipLifecycle } from '@/api/membership-lifecycle.api';
 import type { GymMembership, Membership, Profile } from '@/types/models';
 import { supabase } from '@/lib/supabase';
+import type { MembershipPlanType } from '@/domain/memberships';
+import type { Gym } from '@/types/models';
 
 export type MemberRow = {
   membership: GymMembership;
@@ -49,6 +50,12 @@ export async function fetchGymMemberRows(gymId: string): Promise<MemberRow[]> {
   }));
 }
 
+function monthsToPlanType(months: number): MembershipPlanType {
+  if (months >= 12) return 'yearly';
+  if (months >= 3) return 'quarterly';
+  return 'monthly';
+}
+
 export async function addMemberByPhone(gymId: string, ownerId: string, phone: string, months: number) {
   const normalizedPhone = phone.trim();
   const { data: profile, error: profileError } = await supabase
@@ -74,19 +81,12 @@ export async function addMemberByPhone(gymId: string, ownerId: string, phone: st
 
   if (gymMembershipError) throw gymMembershipError;
 
-  const endsAt = addMonths(new Date(), months).toISOString();
-
-  const { error: membershipError } = await supabase.from('memberships').upsert(
-    {
-      gym_id: gymId,
-      user_id: profile.id,
-      ends_at: endsAt,
-      status: 'active',
-    },
-    { onConflict: 'gym_id,user_id' },
-  );
-
-  if (membershipError) throw membershipError;
+  await upsertMembershipLifecycle({
+    gymId,
+    memberId: profile.id,
+    planType: monthsToPlanType(months),
+    paymentStatus: 'paid',
+  });
 }
 
 export async function removeMemberFromGym(gymId: string, userId: string) {
@@ -97,4 +97,33 @@ export async function removeMemberFromGym(gymId: string, userId: string) {
     .eq('user_id', userId);
 
   if (error) throw error;
+}
+
+export type MemberGymHistoryRow = {
+  id: string;
+  gym_id: string;
+  role_in_gym: string;
+  is_active: boolean;
+  joined_at: string;
+  left_at: string | null;
+  gyms: Pick<Gym, 'id' | 'name' | 'logo_url' | 'slug'> | null;
+};
+
+export async function fetchMemberGymHistory(userId: string): Promise<MemberGymHistoryRow[]> {
+  const { data, error } = await supabase
+    .from('gym_memberships')
+    .select('id, gym_id, role_in_gym, is_active, joined_at, left_at, gyms(id, name, logo_url, slug)')
+    .eq('user_id', userId)
+    .order('joined_at', { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    gym_id: row.gym_id as string,
+    role_in_gym: row.role_in_gym as string,
+    is_active: Boolean(row.is_active),
+    joined_at: row.joined_at as string,
+    left_at: (row.left_at as string | null) ?? null,
+    gyms: Array.isArray(row.gyms) ? ((row.gyms[0] as Pick<Gym, 'id' | 'name' | 'logo_url' | 'slug'> | undefined) ?? null) : ((row.gyms as Pick<Gym, 'id' | 'name' | 'logo_url' | 'slug'> | null) ?? null),
+  }));
 }

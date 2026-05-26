@@ -1,4 +1,12 @@
 export { useAuthSession } from '@/hooks/useAuthSession';
 export { useImageDeletion } from '@/hooks/useImageDeletion';
 export { useImageUpload } from '@/hooks/useImageUpload';
+export { useMemberSearch } from '@/hooks/useMemberSearch';
+export { useMemberRequests } from '@/hooks/useMemberRequests';
+export { useMembershipClock } from '@/hooks/useMembershipClock';
+export { useMembershipDashboard } from '@/hooks/useMembershipDashboard';
+export { useMembershipStatus } from '@/hooks/useMembershipStatus';
+export { useMembers } from '@/hooks/useMembers';
+export { useOwnerDashboard } from '@/hooks/useOwnerDashboard';
+export { useOwnerMemberCandidates } from '@/hooks/useOwnerMemberCandidates';
 export { useTheme } from '@/hooks/useTheme';

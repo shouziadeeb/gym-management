@@ -2,20 +2,24 @@ import { format, parseISO, startOfMonth } from 'date-fns';
 import { useMemo } from 'react';
 import { Dimensions, Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
+import { router } from 'expo-router';
 import { BarChart } from 'react-native-gifted-charts';
 
 import { fetchPaymentsForGym } from '@/api/payments.api';
 import { queryKeys } from '@/api/queries/keys';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
+import { Button } from '@/components/ui/Button';
 import { DATE_FORMAT } from '@/constants/date';
 import { useTheme } from '@/hooks/useTheme';
+import { useMembershipDashboard } from '@/hooks/useMembershipDashboard';
 import { useAppStore } from '@/store/app.store';
 import { layout, text } from '@/theme/classes';
 
 export function OwnerDashboardScreen() {
   const { colors } = useTheme();
   const activeOwnerGymId = useAppStore((state) => state.activeOwnerGymId);
+  const memberships = useMembershipDashboard(activeOwnerGymId ?? undefined);
 
   const paymentsQuery = useQuery({
     queryKey: queryKeys.payments.list(activeOwnerGymId ?? undefined),
@@ -94,9 +98,12 @@ export function OwnerDashboardScreen() {
       </Card>
 
       <Card title="Memberships pipeline">
-        <Text className={text.bodySm}>
-          Track upcoming expirations under Members. Automated reminders run via Supabase Edge Functions + Expo push.
-        </Text>
+        <Text className={text.bodySm}>Active: {memberships.summary.active}</Text>
+        <Text className={text.warningBody}>Expiring Soon: {memberships.summary.expiring}</Text>
+        <Text className={text.error}>Expired: {memberships.summary.expired}</Text>
+        <View className={layout.stackMd}>
+          <Button title="Open Membership Lifecycle" onPress={() => router.push('/membership-lifecycle')} />
+        </View>
       </Card>
     </Screen>
   );

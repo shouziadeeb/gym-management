@@ -1,5 +1,4 @@
-import { addMonths, parseISO } from 'date-fns';
-
+import { renewMembershipLifecycle } from '@/api/membership-lifecycle.api';
 import type { Membership } from '@/types/models';
 import { supabase } from '@/lib/supabase';
 
@@ -20,21 +19,12 @@ export async function renewMembership(membershipId: string, months: number): Pro
   if (readError) throw readError;
 
   const current = row as Membership;
-  const currentEndDate = parseISO(current.ends_at);
-  const renewFrom = currentEndDate > new Date() ? currentEndDate : new Date();
-  const nextEndDate = addMonths(renewFrom, months);
-
-  const { data, error } = await supabase
-    .from('memberships')
-    .update({
-      ends_at: nextEndDate.toISOString(),
-      renewed_at: new Date().toISOString(),
-      status: 'active',
-    })
-    .eq('id', membershipId)
-    .select('*')
-    .single();
-
-  if (error) throw error;
-  return data as Membership;
+  const planType = months >= 12 ? 'yearly' : months >= 3 ? 'quarterly' : 'monthly';
+  return renewMembershipLifecycle({
+    membershipId,
+    gymId: current.gym_id,
+    memberId: current.member_id || current.user_id,
+    planType,
+    paymentStatus: current.payment_status ?? 'paid',
+  });
 }

@@ -1,6 +1,9 @@
 export type UserRole = 'owner' | 'member' | 'trainer' | 'staff' | 'admin';
+export type AccountType = 'normal_user' | 'gym_owner';
 
 export type MembershipStatus = 'active' | 'expiring_soon' | 'expired' | 'cancelled';
+export type MembershipPlanType = 'monthly' | 'quarterly' | 'half_yearly' | 'yearly';
+export type MembershipPaymentStatus = 'paid' | 'pending' | 'failed' | 'waived';
 
 export type Profile = {
   id: string;
@@ -13,6 +16,7 @@ export type Profile = {
   city: string | null;
   onboarding_completed: boolean;
   role: UserRole;
+  account_type: AccountType;
   created_at: string;
   updated_at: string;
 };
@@ -65,8 +69,13 @@ export type Membership = {
   id: string;
   gym_id: string;
   user_id: string;
+  member_id: string;
   plan_id: string | null;
+  plan_type: MembershipPlanType;
   status: MembershipStatus;
+  payment_status: MembershipPaymentStatus;
+  start_date: string;
+  expiry_date: string;
   starts_at: string;
   ends_at: string;
   renewed_at: string | null;

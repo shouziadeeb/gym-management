@@ -1,6 +1,6 @@
 import type { Session } from '@supabase/supabase-js';
 
-import { ensureProfileForUser } from '@/api/profiles.api';
+import { ensureProfileForUser, ensureProfileForUserWithPhone } from '@/api/profiles.api';
 import { isDevAuthEnabled } from '@/lib/env';
 import { logger } from '@/lib/logger';
 import { supabase } from '@/lib/supabase';
@@ -79,7 +79,7 @@ export async function verifyOtp(payload: { phone: string; token: string; mode?: 
   }
 
   if (data.user) {
-    await ensureProfileForUser(data.user);
+    await ensureProfileForUserWithPhone(data.user, normalizedPhone);
   }
 
   logger.info('auth.verifyOtp success', { userId: data.user?.id });

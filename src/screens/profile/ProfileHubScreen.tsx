@@ -26,6 +26,19 @@ import { layout, text } from "@/theme/classes";
 import { cardSurface, modalOverlay } from "@/theme/styles";
 import type { GymSettings } from "@/types/models";
 
+function toDigits(value: string | null | undefined): string {
+  return (value ?? "").replace(/\D/g, "");
+}
+
+function buildDefaultName(phone: string | null | undefined, fallbackId: string | null | undefined): string {
+  const phoneDigits = toDigits(phone);
+  if (phoneDigits.length > 0) return `user${phoneDigits}`;
+
+  const fallbackDigits = toDigits(fallbackId).slice(-8);
+  if (fallbackDigits.length > 0) return `user${fallbackDigits}`;
+  return "user000000";
+}
+
 const gymEditSchema = z.object({
   gymName: z.string().trim().min(2, "Gym name is required"),
   gymDescription: z.string().trim().min(5, "Description is required"),
@@ -70,6 +83,8 @@ export function ProfileHubScreen() {
   }
 
   const profile = myProfileQuery.data;
+  const resolvedPhone = profile?.phone ?? session?.user.phone ?? null;
+  const resolvedName = profile?.full_name?.trim() || buildDefaultName(resolvedPhone, session?.user.id ?? null);
   const profileComplete = Boolean(
     profile?.onboarding_completed && profile?.full_name?.trim(),
   );
@@ -185,10 +200,10 @@ export function ProfileHubScreen() {
           Profile: {profileComplete ? "Complete" : "Incomplete"}
         </Text>
         <Text className={`mb-1 ${text.caption}`}>
-          Phone: {profile?.phone ?? session?.user.phone ?? "Not available"}
+          Phone: {resolvedPhone ?? "Not available"}
         </Text>
         <Text className={`mb-1 ${text.caption}`}>
-          Name: {profile?.full_name ?? "Not set"}
+          Name: {resolvedName}
         </Text>
         <Text className={`mb-1 ${text.caption}`}>
           Gender: {profile?.gender ?? "Not set"}
@@ -223,21 +238,37 @@ export function ProfileHubScreen() {
         />
       </Card>
 
-      <Card title="Membership overview">
-        <Text className={text.caption}>Joined gyms: {memberGyms.length}</Text>
-        <Text className={`${layout.stackSm} ${text.caption}`}>
-          Owned gyms: {ownedGyms.length}
-        </Text>
-        <View className={layout.stackMd}>
-          <Button
-            title="Memberships"
-            onPress={() => {
-              setAppMode("member");
-              router.push("/memberships");
-            }}
-          />
-        </View>
-      </Card>
+      {ownedGyms.length > 0 ? (
+        <Card title="Membership overview">
+          <Text className={text.caption}>Joined gyms: {memberGyms.length}</Text>
+          <Text className={`${layout.stackSm} ${text.caption}`}>
+            Owned gyms: {ownedGyms.length}
+          </Text>
+          <View className={layout.stackMd}>
+            <View className={layout.row}>
+              <View className={layout.flex1}>
+                <Button
+                  title="Add Member"
+                  onPress={() => {
+                    setAppMode("owner");
+                    router.push("/manage-members?view=add_member");
+                  }}
+                />
+              </View>
+              <View className={layout.flex1}>
+                <Button
+                  title="Current Members"
+                  variant="ghost"
+                  onPress={() => {
+                    setAppMode("owner");
+                    router.push("/manage-members?view=current_members");
+                  }}
+                />
+              </View>
+            </View>
+          </View>
+        </Card>
+      ) : null}
 
      
 

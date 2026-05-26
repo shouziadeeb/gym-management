@@ -85,6 +85,7 @@ export default function RootLayout() {
               <Stack.Screen name="dashboard" />
               <Stack.Screen name="manage-members" />
               <Stack.Screen name="analytics" />
+              <Stack.Screen name="membership-lifecycle" />
               <Stack.Screen name="profile" />
               <Stack.Screen name="bookings" />
               <Stack.Screen name="pricing" />

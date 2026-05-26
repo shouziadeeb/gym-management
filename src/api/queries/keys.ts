@@ -10,12 +10,21 @@ export const queryKeys = {
   },
   members: {
     list: (gymId?: string) => ['members', gymId] as const,
+    history: (userId?: string) => ['members', 'history', userId] as const,
+    ownerSearch: (gymId?: string, search?: string, status?: string, page?: number, pageSize?: number) =>
+      ['members', 'owner', gymId, search ?? '', status ?? 'all', page ?? 1, pageSize ?? 20] as const,
+    ownerSummary: (gymId?: string) => ['members', 'owner', 'summary', gymId] as const,
+    ownerCandidates: (gymId?: string, search?: string, page?: number, pageSize?: number) =>
+      ['members', 'owner', 'candidates', gymId, search ?? '', page ?? 1, pageSize ?? 20] as const,
+    memberRequests: (memberId?: string) => ['members', 'requests', memberId] as const,
   },
   payments: {
     list: (gymId?: string) => ['payments', gymId] as const,
   },
   memberships: {
     byUser: (gymId?: string, userId?: string) => ['membership', gymId, userId] as const,
+    byGym: (gymId?: string) => ['membership', 'gym', gymId] as const,
+    renewalsByMember: (gymId?: string, memberId?: string) => ['membership', 'renewals', gymId, memberId] as const,
   },
   config: {
     staleTime: QUERY_STALE_TIME_MS,

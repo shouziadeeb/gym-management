@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { ScrollView, View } from 'react-native';
+import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/hooks/useTheme';
@@ -9,9 +9,11 @@ type Props = {
   children: ReactNode;
   scroll?: boolean;
   className?: string;
+  refreshing?: boolean;
+  onRefresh?: () => void;
 };
 
-export function Screen({ children, scroll, className }: Props) {
+export function Screen({ children, scroll, className, refreshing = false, onRefresh }: Props) {
   const { colors } = useTheme();
   const backgroundColor = colors.background;
 
@@ -21,6 +23,7 @@ export function Screen({ children, scroll, className }: Props) {
       style={{ backgroundColor }}
       contentContainerStyle={{ paddingBottom: screenLayout.screenPaddingBottom }}
       keyboardShouldPersistTaps="handled"
+      refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} /> : undefined}
     >
       {children}
     </ScrollView>

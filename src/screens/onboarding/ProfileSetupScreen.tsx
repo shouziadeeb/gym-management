@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Text, View } from 'react-native';
 import { z } from 'zod';
 
@@ -15,27 +15,34 @@ import { useMyProfile } from '@/hooks/useMyProfile';
 import { useAuthStore } from '@/store/auth.store';
 import { layout, text } from '@/theme/classes';
 
+const PROFILE_GENDERS = ['male', 'female', 'other', 'prefer_not_to_say'] as const;
+
+function toDigits(value: string | null | undefined): string {
+  return (value ?? '').replace(/\D/g, '');
+}
+
+function buildDefaultName(phone: string | null | undefined): string {
+  const digits = toDigits(phone);
+  if (digits.length > 0) return `user${digits}`;
+  return `user${Date.now().toString().slice(-6)}`;
+}
+
 const profileSchema = z
   .object({
     fullName: z.string().trim().min(2, 'Full name is required'),
-    gender: z.enum(['male', 'female', 'other', 'prefer_not_to_say'], {
-      errorMap: () => ({ message: 'Select a valid gender' }),
-    }),
+    phone: z.string().trim().min(5, 'Phone is required'),
+    gender: z.enum(PROFILE_GENDERS, { message: 'Select a valid gender' }),
     age: z
       .string()
-      .optional()
       .transform((v) => (v ?? '').trim()),
     dateOfBirth: z
       .string()
-      .optional()
       .transform((v) => (v ?? '').trim()),
     city: z
       .string()
-      .optional()
       .transform((v) => (v ?? '').trim()),
     fitnessGoal: z
       .string()
-      .optional()
       .transform((v) => (v ?? '').trim()),
   })
   .superRefine((values, ctx) => {
@@ -57,21 +64,25 @@ type ProfileForm = z.infer<typeof profileSchema>;
 
 export function ProfileSetupScreen() {
   const { redirect } = useLocalSearchParams<{ redirect?: string }>();
-  const [step, setStep] = useState<1 | 2>(1);
   const session = useAuthStore((state) => state.session);
   const profileQuery = useMyProfile();
+  const sessionPhone = session?.user.phone ?? null;
 
-  const defaults = useMemo(() => {
+  const defaults = useMemo<ProfileForm>(() => {
     const profile = profileQuery.data;
+    const resolvedPhone = profile?.phone ?? sessionPhone ?? '';
+    const resolvedName = profile?.full_name?.trim() || buildDefaultName(resolvedPhone);
+
     return {
-      fullName: profile?.full_name ?? '',
+      fullName: resolvedName,
+      phone: resolvedPhone,
       gender: (profile?.gender ?? 'prefer_not_to_say') as ProfileForm['gender'],
       age: profile?.age != null ? String(profile.age) : '',
       dateOfBirth: profile?.date_of_birth ?? '',
       city: profile?.city ?? '',
       fitnessGoal: profile?.fitness_goal ?? '',
     };
-  }, [profileQuery.data]);
+  }, [profileQuery.data, sessionPhone]);
 
   const form = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
@@ -85,11 +96,12 @@ export function ProfileSetupScreen() {
     try {
       await updateMyProfile(userId, {
         full_name: values.fullName.trim(),
+        phone: values.phone.trim(),
         gender: values.gender,
         age: values.age ? Number(values.age) : null,
-        date_of_birth: values.dateOfBirth || null,
-        city: values.city || null,
-        fitness_goal: values.fitnessGoal || null,
+        date_of_birth: values.dateOfBirth ?? null,
+        city: values.city ?? null,
+        fitness_goal: values.fitnessGoal ?? null,
         onboarding_completed: true,
       });
 
@@ -116,84 +128,80 @@ export function ProfileSetupScreen() {
       <Text className={`${layout.stack} ${text.screenSubtitle}`}>
         Complete your profile once to personalize memberships, onboarding, and gym actions.
       </Text>
-      <Text className={`${layout.stack} ${text.caption}`}>Phone: {session.user.phone ?? 'Not available'}</Text>
 
-      {step === 1 ? (
-        <View className={layout.sectionXl}>
-          <Controller
-            control={form.control}
-            name="fullName"
-            render={({ field: { onChange, value } }) => (
-              <Input label="Full name" placeholder="Your name" value={value} onChangeText={onChange} autoCapitalize="sentences" />
-            )}
-          />
-          <Controller
-            control={form.control}
-            name="gender"
-            render={({ field: { onChange, value } }) => (
-              <Input
-                label="Gender (male/female/other/prefer_not_to_say)"
-                placeholder="prefer_not_to_say"
-                value={value}
-                onChangeText={(v) => onChange(v as ProfileForm['gender'])}
-              />
-            )}
-          />
-          <Controller
-            control={form.control}
-            name="age"
-            render={({ field: { onChange, value } }) => (
-              <Input label="Age (optional)" placeholder="24" value={value} onChangeText={onChange} keyboardType="number-pad" />
-            )}
-          />
-          {form.formState.errors.fullName?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.fullName.message}</Text> : null}
-          {form.formState.errors.gender?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.gender.message}</Text> : null}
-          {form.formState.errors.age?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.age.message}</Text> : null}
-          <Button title="Next" onPress={() => setStep(2)} />
-        </View>
-      ) : (
-        <View className={layout.sectionXl}>
-          <Controller
-            control={form.control}
-            name="dateOfBirth"
-            render={({ field: { onChange, value } }) => (
-              <Input label="Date of birth (optional)" placeholder="1999-12-31" value={value} onChangeText={onChange} />
-            )}
-          />
-          <Controller
-            control={form.control}
-            name="city"
-            render={({ field: { onChange, value } }) => (
-              <Input label="City (optional)" placeholder="Delhi" value={value} onChangeText={onChange} autoCapitalize="sentences" />
-            )}
-          />
-          <Controller
-            control={form.control}
-            name="fitnessGoal"
-            render={({ field: { onChange, value } }) => (
-              <Input
-                label="Fitness goal (optional)"
-                placeholder="Strength and fat loss"
-                value={value}
-                onChangeText={onChange}
-                autoCapitalize="sentences"
-              />
-            )}
-          />
-          {form.formState.errors.dateOfBirth?.message ? (
-            <Text className={`mb-2 ${text.error}`}>{form.formState.errors.dateOfBirth.message}</Text>
-          ) : null}
-          {form.formState.errors.root?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.root.message}</Text> : null}
-          <View className={layout.row}>
-            <View className={layout.flex1}>
-              <Button title="Back" variant="ghost" onPress={() => setStep(1)} />
-            </View>
-            <View className={layout.flex1}>
-              <Button title="Complete setup" onPress={submit} loading={form.formState.isSubmitting} />
-            </View>
-          </View>
-        </View>
-      )}
+      <View className={layout.sectionXl}>
+        <Controller
+          control={form.control}
+          name="phone"
+          render={({ field: { onChange, value } }) => (
+            <Input label="Phone" placeholder="+919876543210" value={value} onChangeText={onChange} keyboardType="phone-pad" />
+          )}
+        />
+        <Controller
+          control={form.control}
+          name="fullName"
+          render={({ field: { onChange, value } }) => (
+            <Input label="Full name" placeholder="user9876543210" value={value} onChangeText={onChange} autoCapitalize="none" />
+          )}
+        />
+        <Controller
+          control={form.control}
+          name="gender"
+          render={({ field: { onChange, value } }) => (
+            <Input
+              label="Gender (male/female/other/prefer_not_to_say)"
+              placeholder="prefer_not_to_say"
+              value={value}
+              onChangeText={(v) => onChange(v as ProfileForm['gender'])}
+            />
+          )}
+        />
+        <Controller
+          control={form.control}
+          name="age"
+          render={({ field: { onChange, value } }) => (
+            <Input label="Age (optional)" placeholder="24" value={value} onChangeText={onChange} keyboardType="number-pad" />
+          )}
+        />
+        <Controller
+          control={form.control}
+          name="dateOfBirth"
+          render={({ field: { onChange, value } }) => (
+            <Input label="Date of birth (optional)" placeholder="1999-12-31" value={value} onChangeText={onChange} />
+          )}
+        />
+        <Controller
+          control={form.control}
+          name="city"
+          render={({ field: { onChange, value } }) => (
+            <Input label="City (optional)" placeholder="Delhi" value={value} onChangeText={onChange} autoCapitalize="sentences" />
+          )}
+        />
+        <Controller
+          control={form.control}
+          name="fitnessGoal"
+          render={({ field: { onChange, value } }) => (
+            <Input
+              label="Fitness goal (optional)"
+              placeholder="Strength and fat loss"
+              value={value}
+              onChangeText={onChange}
+              autoCapitalize="sentences"
+            />
+          )}
+        />
+
+        {form.formState.errors.phone?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.phone.message}</Text> : null}
+        {form.formState.errors.fullName?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.fullName.message}</Text> : null}
+        {form.formState.errors.gender?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.gender.message}</Text> : null}
+        {form.formState.errors.age?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.age.message}</Text> : null}
+        {form.formState.errors.dateOfBirth?.message ? (
+          <Text className={`mb-2 ${text.error}`}>{form.formState.errors.dateOfBirth.message}</Text>
+        ) : null}
+        {form.formState.errors.root?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.root.message}</Text> : null}
+
+        <Button title="Complete setup" onPress={submit} loading={form.formState.isSubmitting} />
+      </View>
     </Screen>
   );
 }

@@ -5,7 +5,7 @@ import { withRetry } from '@/lib/retry';
 import { supabase } from '@/lib/supabase';
 import { isUniqueViolation } from '@/utils/supabase-errors';
 import { buildGymSlug } from '@/utils/slug';
-import { ensureProfileForUser } from '@/api/profiles.api';
+import { ensureProfileForUser, promoteToGymOwner } from '@/api/profiles.api';
 
 const MAX_SLUG_RETRIES = 3;
 
@@ -127,6 +127,7 @@ export async function createGym(input: CreateGymInput): Promise<Gym> {
         return data;
       });
 
+      await promoteToGymOwner(user.id);
       return data as Gym;
     } catch (error) {
       lastError = error;

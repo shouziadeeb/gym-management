@@ -1,6 +1,6 @@
 import type { Session } from '@supabase/supabase-js';
 
-import { ensureProfileForUser } from '@/api/profiles.api';
+import { ensureProfileForUserWithPhone } from '@/api/profiles.api';
 import { logger } from '@/lib/logger';
 import { supabase } from '@/lib/supabase';
 import { sanitizeIndianPhoneInput } from '@/utils/phone';
@@ -85,7 +85,11 @@ async function signInBridgeUser(email: string, password: string): Promise<Sessio
     throw new Error('Login succeeded but no session was returned.');
   }
   if (signIn.data.user) {
-    await ensureProfileForUser(signIn.data.user);
+    const inferredPhone = (() => {
+      const digits = email.split('@')[0];
+      return /^\d{10,15}$/.test(digits) ? `+${digits}` : null;
+    })();
+    await ensureProfileForUserWithPhone(signIn.data.user, inferredPhone);
   }
   return signIn.data.session;
 }
