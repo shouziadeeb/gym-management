@@ -7,7 +7,8 @@ import { z } from 'zod';
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Screen } from '@/components/ui/Screen';
+import { OnboardingFormPanel } from '@/components/onboarding/OnboardingFormPanel';
+import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen';
 import { APP_NAME } from '@/constants/app';
 import { isDevAuthEnabled } from '@/lib/env';
 import { getErrorMessage } from '@/lib/errors';
@@ -110,8 +111,8 @@ export function LoginScreen({ mode = 'login' }: AuthScreenProps) {
   });
 
   return (
-    <Screen scroll>
-      <View className={layout.screenTopLg}>
+    <OnboardingScreen scroll>
+      <OnboardingFormPanel>
         <Text className={text.screenTitle}>{APP_NAME}</Text>
         <Text className={`${layout.stackSm} ${text.screenTitleMd}`}>
           {authMode === 'signup' ? 'Create your account' : 'Login to your account'}
@@ -121,8 +122,8 @@ export function LoginScreen({ mode = 'login' }: AuthScreenProps) {
             ? `Development OTP ${authMode === 'signup' ? 'signup' : 'login'}: enter a 10-digit phone. OTP is simulated.`
             : 'Phone sign-in. Example: 9756304445'}
         </Text>
-      </View>
 
+        <View className={layout.sectionXl}>
       {step === 'phone' ? (
         <>
           <Controller
@@ -187,8 +188,9 @@ export function LoginScreen({ mode = 'login' }: AuthScreenProps) {
           </View>
         </>
       )}
+        </View>
 
-      <View className={`${layout.sectionXl} items-center`}>
+      <View className={`${layout.section} items-center`}>
         {authMode === 'login' ? (
           <Pressable
             onPress={() =>
@@ -209,6 +211,7 @@ export function LoginScreen({ mode = 'login' }: AuthScreenProps) {
       </View>
 
       {message ? <Text className={`${layout.stackLg} text-center ${text.bodySm}`}>{message}</Text> : null}
-    </Screen>
+      </OnboardingFormPanel>
+    </OnboardingScreen>
   );
 }

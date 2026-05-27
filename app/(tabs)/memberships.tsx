@@ -8,6 +8,7 @@ export default function MembershipsTabRoute() {
       authIntent="member_dashboard"
       requireProfile
       waitForAuthInit
+      loadingVariant="spinner"
     >
       <MemberHomeScreen />
     </ProtectedRoute>

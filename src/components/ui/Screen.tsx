@@ -1,9 +1,11 @@
+import { useSegments } from 'expo-router';
 import { ReactNode } from 'react';
 import { RefreshControl, ScrollView, View, type ViewStyle } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
 import { useScreenContentInsets } from '@/hooks/useScreenContentInsets';
 import { useTheme } from '@/hooks/useTheme';
+import { shouldOmitTopSafeAreaForRoute } from '@/lib/safe-area';
 import { isWeb, webFullWidthStyle, webScrollContainerStyle } from '@/lib/web-layout';
 import { screenLayout } from '@/theme/spacing';
 
@@ -14,11 +16,25 @@ type Props = {
   refreshing?: boolean;
   onRefresh?: () => void;
   /**
-   * Use on stack screens that already render {@link GlobalBackButton} (gym detail, etc.)
-   * so top safe-area is not applied twice.
+   * Stack routes with {@link GlobalBackButton} skip top safe-area by default.
+   * Pass `false` to force status-bar padding (rare).
    */
   omitTopSafeArea?: boolean;
+  /** Let a parent background (e.g. onboarding photo) show through. */
+  transparentBackground?: boolean;
 };
+
+function resolveSafeAreaEdges(omitTopSafeArea: boolean, inTabs: boolean): Edge[] {
+  if (inTabs) {
+    return isWeb ? ['top'] : ['top', 'left', 'right'];
+  }
+
+  if (omitTopSafeArea) {
+    return isWeb ? ['bottom', 'left', 'right'] : ['bottom', 'left', 'right'];
+  }
+
+  return isWeb ? ['top', 'bottom'] : ['top', 'bottom', 'left', 'right'];
+}
 
 export function Screen({
   children,
@@ -26,23 +42,19 @@ export function Screen({
   className,
   refreshing = false,
   onRefresh,
-  omitTopSafeArea = false,
+  omitTopSafeArea: omitTopSafeAreaProp,
+  transparentBackground = false,
 }: Props) {
+  const segments = useSegments();
   const { colors } = useTheme();
-  const { bottomInset } = useScreenContentInsets({ omitTopSafeArea });
-  const backgroundColor = colors.background;
+  const omitTopSafeArea = omitTopSafeAreaProp ?? shouldOmitTopSafeAreaForRoute(segments);
+  const { bottomInset, contentTopGap, inTabs } = useScreenContentInsets({ omitTopSafeArea });
+  const backgroundColor = transparentBackground ? 'transparent' : colors.background;
   const horizontalPadding = screenLayout.screenPaddingX;
-
-  /** Web mobile browsers don't need horizontal safe-area padding; it narrows tab content. */
-  const safeEdges: Edge[] = omitTopSafeArea
-    ? isWeb
-      ? []
-      : ['left', 'right']
-    : isWeb
-      ? ['top']
-      : ['top', 'left', 'right'];
+  const safeEdges = resolveSafeAreaEdges(omitTopSafeArea, inTabs);
 
   const scrollContentStyle: ViewStyle = {
+    paddingTop: contentTopGap,
     paddingBottom: bottomInset,
     flexGrow: 1,
     ...(isWeb ? webFullWidthStyle : null),
@@ -51,6 +63,8 @@ export function Screen({
   const paddedContentStyle: ViewStyle = {
     flex: 1,
     paddingHorizontal: horizontalPadding,
+    paddingTop: scroll ? 0 : contentTopGap,
+    paddingBottom: scroll ? 0 : bottomInset,
     backgroundColor,
     ...webFullWidthStyle,
   };

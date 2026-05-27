@@ -11,7 +11,7 @@ function getIntentRedirectPath(intent: AuthIntent): string {
     case 'join_gym':
     case 'buy_membership':
     case 'member_dashboard':
-      return '/memberships';
+      return '/(tabs)/memberships';
     case 'profile':
       return '/profile-setup';
     default:

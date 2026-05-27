@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Alert, Modal, Text, TextInput, View } from 'react-native';
+import { Alert, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 import { z } from 'zod';
@@ -18,6 +18,7 @@ import { OwnerMemberFilters } from '@/components/owner/OwnerMemberFilters';
 import { OwnerMemberListSkeleton } from '@/components/owner/OwnerMemberListSkeleton';
 import { OwnerMemberProfileCard } from '@/components/owner/OwnerMemberProfileCard';
 import { Button } from '@/components/ui/Button';
+import { ModalCard } from '@/components/ui/ModalCard';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
@@ -30,7 +31,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { toE164 } from '@/utils/phone';
 import { layout, surfaces, text } from '@/theme/classes';
 import { spacing } from '@/theme/spacing';
-import { cardSurface, inputSurface, modalOverlay } from '@/theme/styles';
+import { inputSurface } from '@/theme/styles';
 import type { MembershipPlanType } from '@/domain/memberships';
 
 const phoneSchema = z.object({
@@ -451,68 +452,58 @@ export function MembersScreen() {
         </View>
       </Card>
 
-      <Modal visible={!!payTarget} transparent animationType="fade">
-        <View className={surfaces.modalOverlay} style={modalOverlay(colors)}>
-          <View className={surfaces.modalPanel} style={cardSurface(colors, true)}>
-            <Text className={text.cardTitle} style={{ color: colors.foreground }}>
-              Record payment
-            </Text>
-            <Text className={`${layout.stackSm} ${text.caption}`}>Amount (USD)</Text>
-            <Text className={`${layout.stackSm} ${text.caption}`}>Renew Plan Type (monthly/quarterly/yearly)</Text>
+      <ModalCard visible={!!payTarget} onClose={() => setPayTarget(null)} anchor="center">
+        <Text className={text.cardTitle} style={{ color: colors.foreground }}>
+          Record payment
+        </Text>
+        <Text className={`${layout.stackSm} ${text.caption}`}>Amount (USD)</Text>
+        <Text className={`${layout.stackSm} ${text.caption}`}>Renew Plan Type (monthly/quarterly/yearly)</Text>
 
-            <TextInput
-              className={`${layout.stack} ${surfaces.inputCompact}`}
-              style={inputSurface(colors)}
-              value={renewPlanType}
-              onChangeText={(value) => setRenewPlanType((value as MembershipPlanType) || 'monthly')}
-              placeholderTextColor={colors.placeholder}
-            />
+        <TextInput
+          className={`${layout.stack} ${surfaces.inputCompact}`}
+          style={inputSurface(colors)}
+          value={renewPlanType}
+          onChangeText={(value) => setRenewPlanType((value as MembershipPlanType) || 'monthly')}
+          placeholderTextColor={colors.placeholder}
+        />
 
-            <TextInput
-              className={`${layout.stack} ${surfaces.inputCompact}`}
-              style={inputSurface(colors)}
-              keyboardType="decimal-pad"
-              value={payAmount}
-              onChangeText={setPayAmount}
-              placeholderTextColor={colors.placeholder}
-            />
+        <TextInput
+          className={`${layout.stack} ${surfaces.inputCompact}`}
+          style={inputSurface(colors)}
+          keyboardType="decimal-pad"
+          value={payAmount}
+          onChangeText={setPayAmount}
+          placeholderTextColor={colors.placeholder}
+        />
 
-            <View className={`${layout.stackLg} ${layout.row}`}>
-              <View className={layout.flex1}>
-                <Button title="Cancel" variant="ghost" onPress={() => setPayTarget(null)} />
-              </View>
-              <View className={layout.flex1}>
-                <Button title="Save" onPress={submitPayment} />
-              </View>
-            </View>
+        <View className={`${layout.stackLg} ${layout.row}`}>
+          <View className={layout.flex1}>
+            <Button title="Cancel" variant="ghost" onPress={() => setPayTarget(null)} />
+          </View>
+          <View className={layout.flex1}>
+            <Button title="Save" onPress={submitPayment} />
           </View>
         </View>
-      </Modal>
+      </ModalCard>
 
-      <Modal visible={!!removeTarget} transparent animationType="fade" onRequestClose={() => setRemoveTarget(null)}>
-        <View className={surfaces.modalOverlay} style={modalOverlay(colors)}>
-          <View className={surfaces.modalPanel} style={cardSurface(colors, true)}>
-            <Text className={text.cardTitle} style={{ color: colors.foreground }}>
-              Remove member
-            </Text>
-            <Text className={`${layout.stackSm} ${text.caption}`}>
-              Remove {removeTarget?.label ?? 'this member'} from current members?
-            </Text>
-            <Text className={`${layout.stackSm} ${text.caption}`}>
-              They can be added again later.
-            </Text>
+      <ModalCard visible={!!removeTarget} onClose={() => setRemoveTarget(null)} anchor="center">
+        <Text className={text.cardTitle} style={{ color: colors.foreground }}>
+          Remove member
+        </Text>
+        <Text className={`${layout.stackSm} ${text.caption}`}>
+          Remove {removeTarget?.label ?? 'this member'} from current members?
+        </Text>
+        <Text className={`${layout.stackSm} ${text.caption}`}>They can be added again later.</Text>
 
-            <View className={`${layout.stackLg} ${layout.row}`}>
-              <View className={layout.flex1}>
-                <Button title="Cancel" variant="ghost" onPress={() => setRemoveTarget(null)} disabled={isRemoving} />
-              </View>
-              <View className={layout.flex1}>
-                <Button title="Confirm Remove" variant="danger" onPress={() => void confirmRemoveMember()} loading={isRemoving} />
-              </View>
-            </View>
+        <View className={`${layout.stackLg} ${layout.row}`}>
+          <View className={layout.flex1}>
+            <Button title="Cancel" variant="ghost" onPress={() => setRemoveTarget(null)} disabled={isRemoving} />
+          </View>
+          <View className={layout.flex1}>
+            <Button title="Confirm Remove" variant="danger" onPress={() => void confirmRemoveMember()} loading={isRemoving} />
           </View>
         </View>
-      </Modal>
+      </ModalCard>
     </Screen>
   );
 }

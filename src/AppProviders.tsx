@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StyleSheet, colorScheme as nativewindColorScheme } from 'nativewind';
 
 import { queryClient } from '@/api/queries/client';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { useRegisterPush } from '@/hooks/useRegisterPush';
 import { useTheme } from '@/hooks/useTheme';
 import { webFullWidthStyle } from '@/lib/web-layout';
@@ -34,9 +35,11 @@ export function AppProviders({ children }: { children: ReactNode }) {
       <SafeAreaProvider style={{ flex: 1, ...webFullWidthStyle }}>
         <View style={{ flex: 1, backgroundColor: colors.background, ...webFullWidthStyle }}>
           <QueryClientProvider client={queryClient}>
-            <PushBootstrap />
-            <StatusBar style={isDark ? 'light' : 'dark'} />
-            {children}
+            <ErrorBoundary>
+              <PushBootstrap />
+              <StatusBar style={isDark ? 'light' : 'dark'} />
+              {children}
+            </ErrorBoundary>
           </QueryClientProvider>
         </View>
       </SafeAreaProvider>

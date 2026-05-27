@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+
+import { ModalCard } from '@/components/ui/ModalCard';
 
 import {
   TIME_PICKER_HOURS,
@@ -13,7 +15,7 @@ import {
 } from '@/components/ui/time-picker-utils';
 import { useTheme } from '@/hooks/useTheme';
 import { layout, surfaces, text } from '@/theme/classes';
-import { cardSurface, modalOverlay, textColor } from '@/theme/styles';
+import { cardSurface, textColor } from '@/theme/styles';
 
 type Props = {
   label: string;
@@ -87,18 +89,7 @@ export function TimePickerField({
         <Text style={{ color: value ? colors.foreground : colors.placeholder }}>{displayValue}</Text>
       </Pressable>
 
-      <Modal
-        visible={open}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setOpen(false)}
-      >
-        <Pressable className="flex-1" style={modalOverlay(colors)} onPress={() => setOpen(false)}>
-          <View
-            className="mx-4 mt-24 rounded-2xl p-4"
-            style={cardSurface(colors, true)}
-            onStartShouldSetResponder={() => true}
-          >
+      <ModalCard visible={open} onClose={() => setOpen(false)} anchor="center">
             <Text className={`mb-3 ${text.cardTitle}`}>{label}</Text>
 
             <Text className={`mb-1 ${text.label}`} style={{ color: textColor(colors, 'muted') }}>
@@ -180,9 +171,7 @@ export function TimePickerField({
                 </Pressable>
               </View>
             </View>
-          </View>
-        </Pressable>
-      </Modal>
+      </ModalCard>
     </View>
   );
 }

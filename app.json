@@ -28,6 +28,9 @@
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.CAMERA"
       ]
     },
@@ -68,6 +71,12 @@
       "eas": {
         "projectId": "e909d359-d317-46a3-b395-28fac9a4499b"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/e909d359-d317-46a3-b395-28fac9a4499b"
     }
   }
 }

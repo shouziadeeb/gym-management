@@ -60,6 +60,15 @@ export function highlightBorder(colors: ThemeColors): ViewStyle {
   return { borderColor: `${colors.highlightBorder}99` };
 }
 
+/** Frosted glass tint over onboarding background — keeps photo visible behind. */
+export function onboardingFormPanelSurface(colors: ThemeColors, isDark: boolean): ViewStyle {
+  return {
+    backgroundColor: isDark ? 'rgba(13, 13, 13, 0.32)' : 'rgba(255, 255, 255, 0.22)',
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.45)',
+    borderWidth: 1,
+  };
+}
+
 const textRoles = {
   foreground: (c: ThemeColors) => c.foreground,
   secondary: (c: ThemeColors) => c.foregroundSecondary,

@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Modal, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
+import { ModalCard } from '@/components/ui/ModalCard';
 import { useTheme } from '@/hooks/useTheme';
 import { layout, surfaces, text } from '@/theme/classes';
-import { cardSurface, modalOverlay, textColor } from '@/theme/styles';
+import { cardSurface, textColor } from '@/theme/styles';
 
 type Option<T extends string> = {
   value: T;
@@ -47,39 +48,31 @@ export function SelectField<T extends string>({
         </Text>
       </Pressable>
 
-      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable className="flex-1" style={modalOverlay(colors)} onPress={() => setOpen(false)}>
+      <ModalCard visible={open} onClose={() => setOpen(false)} anchor="center">
+        <Text className={`mb-3 ${text.cardTitle}`}>{label}</Text>
+        {options.map((option) => (
           <Pressable
-            className="mx-4 mt-32 rounded-2xl p-4"
-            style={cardSurface(colors, true)}
-            onPress={(event) => event.stopPropagation()}
+            key={option.value}
+            className="mb-2 rounded-xl px-3 py-3"
+            style={{
+              backgroundColor: option.value === value ? colors.primary : colors.chipInactive,
+            }}
+            onPress={() => {
+              onChange(option.value);
+              setOpen(false);
+            }}
           >
-            <Text className={`mb-3 ${text.cardTitle}`}>{label}</Text>
-            {options.map((option) => (
-              <Pressable
-                key={option.value}
-                className="mb-2 rounded-xl px-3 py-3"
-                style={{
-                  backgroundColor: option.value === value ? colors.primary : colors.chipInactive,
-                }}
-                onPress={() => {
-                  onChange(option.value);
-                  setOpen(false);
-                }}
-              >
-                <Text
-                  style={{
-                    color: option.value === value ? colors.primaryForeground : colors.foreground,
-                    fontWeight: option.value === value ? '600' : '400',
-                  }}
-                >
-                  {option.label}
-                </Text>
-              </Pressable>
-            ))}
+            <Text
+              style={{
+                color: option.value === value ? colors.primaryForeground : colors.foreground,
+                fontWeight: option.value === value ? '600' : '400',
+              }}
+            >
+              {option.label}
+            </Text>
           </Pressable>
-        </Pressable>
-      </Modal>
+        ))}
+      </ModalCard>
     </View>
   );
 }

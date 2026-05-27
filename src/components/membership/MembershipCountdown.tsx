@@ -5,7 +5,7 @@ import { useMembershipStatus } from '@/hooks/useMembershipStatus';
 import { text } from '@/theme/classes';
 
 type Props = {
-  membership: Pick<Membership, 'status' | 'expiry_date'>;
+  membership: Pick<Membership, 'status' | 'expiry_date'> & { ends_at?: string | null };
 };
 
 export function MembershipCountdown({ membership }: Props) {

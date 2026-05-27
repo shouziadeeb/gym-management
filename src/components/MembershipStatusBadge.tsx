@@ -1,10 +1,16 @@
 import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge';
-import { getMembershipStatusLabel, getMembershipStatusTone } from '@/domain/memberships';
+import {
+  getMembershipStatus,
+  getMembershipStatusLabel,
+  getMembershipStatusTone,
+  resolveMembershipExpiryDate,
+} from '@/domain/memberships';
 import type { MembershipStatus } from '@/types/models';
 
 type Props = {
   status: MembershipStatus;
-  expiryDate: string;
+  expiryDate?: string | null;
+  endsAt?: string | null;
 };
 
 const toneMap: Record<'red' | 'yellow' | 'gray' | 'green', StatusTone> = {
@@ -14,8 +20,13 @@ const toneMap: Record<'red' | 'yellow' | 'gray' | 'green', StatusTone> = {
   green: 'active',
 };
 
-export function MembershipStatusBadge({ status, expiryDate }: Props) {
-  const finalStatus = status === 'cancelled' ? status : expiryDate ? status : 'expired';
+export function MembershipStatusBadge({ status, expiryDate, endsAt }: Props) {
+  const resolvedExpiry = resolveMembershipExpiryDate({
+    expiry_date: expiryDate,
+    ends_at: endsAt,
+  });
+  const finalStatus: MembershipStatus =
+    status === 'cancelled' ? status : getMembershipStatus(resolvedExpiry);
   const label = getMembershipStatusLabel(finalStatus);
   const toneId = getMembershipStatusTone(finalStatus);
 

@@ -181,7 +181,7 @@ export function UserProfileScreen() {
   if (profileQuery.isLoading) {
     return (
       <Screen>
-        <View className={`${layout.screenTop} flex-1 items-center justify-center`}>
+        <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color={colors.primary} />
           <Text className={`${layout.stack} ${text.caption}`}>Loading your profile…</Text>
         </View>
@@ -192,7 +192,7 @@ export function UserProfileScreen() {
   if (profileQuery.isError) {
     return (
       <Screen scroll>
-        <Text className={`${layout.screenTop} ${text.screenTitle}`}>My profile</Text>
+        <Text className={text.screenTitle}>My profile</Text>
         <Card title="Unable to load profile" className={layout.section}>
           <Text className={`mb-3 ${text.error}`}>{getErrorMessage(profileQuery.error)}</Text>
           <Button title="Try again" onPress={() => profileQuery.refetch()} loading={profileQuery.isFetching} />
@@ -203,7 +203,7 @@ export function UserProfileScreen() {
 
   return (
     <Screen scroll>
-      <Text className={`${layout.screenTop} ${text.screenTitle}`}>My profile</Text>
+      <Text className={text.screenTitle}>My profile</Text>
       <Text className={`${layout.stack} ${text.screenSubtitle}`}>
         Your account details from onboarding.
       </Text>

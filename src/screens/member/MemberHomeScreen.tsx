@@ -1,4 +1,3 @@
-import { format, parseISO } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 import { Alert, Text, View } from 'react-native';
 import { useEffect } from 'react';
@@ -18,7 +17,7 @@ import { OwnerMembershipHubCard } from '@/components/owner/OwnerMembershipHubCar
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
-import { DATE_FORMAT } from '@/constants/date';
+import { formatMembershipLongDate } from '@/domain/memberships';
 import { useMemberRequests } from '@/hooks/useMemberRequests';
 import { useUserGyms } from '@/hooks/useUserGyms';
 import { getErrorMessage } from '@/lib/errors';
@@ -71,6 +70,9 @@ export function MemberHomeScreen() {
   const hasActiveGym = gym != null || (activeGymRows.length > 0 && memberGyms.length > 0);
   const currentGymId = hasActiveGym ? (activeMemberGymId ?? activeGymMembership?.gym_id ?? gym?.id ?? null) : null;
   const membershipCancelled = membership?.status === 'cancelled';
+  const membershipValidThrough =
+    membership &&
+    (formatMembershipLongDate(membership.ends_at) ?? formatMembershipLongDate(membership.expiry_date));
 
   useEffect(() => {
     if (!isFocused || !userId) return;
@@ -194,12 +196,16 @@ export function MemberHomeScreen() {
 
           {membership && !membershipCancelled ? (
             <>
-              <MembershipStatusBadge status={membership.status} expiryDate={membership.expiry_date} />
+              <MembershipStatusBadge
+                status={membership.status}
+                expiryDate={membership.expiry_date}
+                endsAt={membership.ends_at}
+              />
               <Text className={`${layout.stackLg} ${text.listTitle}`}>Plan: {membership.plan_type}</Text>
               <MembershipCountdown membership={membership} />
-              <Text className={`${layout.stackSm} ${text.caption}`}>
-                Valid through {format(parseISO(membership.ends_at), DATE_FORMAT.long)}
-              </Text>
+              {membershipValidThrough ? (
+                <Text className={`${layout.stackSm} ${text.caption}`}>Valid through {membershipValidThrough}</Text>
+              ) : null}
               <Text className={`${layout.stackLg} ${text.caption}`}>
                 Renewal reminders are sent 3 days before expiry via push notifications once your gym enables automations.
               </Text>

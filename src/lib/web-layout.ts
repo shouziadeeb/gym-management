@@ -1,4 +1,4 @@
-import { Platform, type ViewStyle } from 'react-native';
+import { Platform, type ImageStyle, type ViewStyle } from 'react-native';
 
 export const isWeb = Platform.OS === 'web';
 
@@ -8,6 +8,22 @@ export const webFullWidthStyle: ViewStyle = isWeb
       width: '100%',
       alignSelf: 'stretch',
     } as ViewStyle)
+  : {};
+
+/** RN Web: object-fit cover so full-bleed backgrounds fill the viewport. */
+export const webImageCoverStyle: ImageStyle = isWeb
+  ? ({
+      objectFit: 'cover',
+      objectPosition: 'center center',
+    } as ImageStyle)
+  : {};
+
+/** RN Web: show the full photo without aggressive cropping. */
+export const webImageContainStyle: ImageStyle = isWeb
+  ? ({
+      objectFit: 'contain',
+      objectPosition: 'center center',
+    } as ImageStyle)
   : {};
 
 /** Scroll containers on RN Web: full width; clip horizontal bleed so rails don't shift layout. */

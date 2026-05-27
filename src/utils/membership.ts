@@ -1,32 +1,26 @@
-import { format, parseISO } from 'date-fns';
-
 import {
   getMembershipCountdownLabel,
   getMembershipStatus,
   getMembershipStatusLabel,
   getRemainingDays,
+  resolveMembershipExpiryDate,
   type MembershipDashboardFilter,
   type MembershipDashboardSort,
   type MembershipLifecycleRecord,
 } from '@/domain/memberships';
 import type { Membership } from '@/types/models';
 
-function resolveExpiryDate(membership: Pick<Membership, 'expiry_date' | 'ends_at'>): string {
-  if (membership.expiry_date) return membership.expiry_date;
-  return format(parseISO(membership.ends_at), 'yyyy-MM-dd');
-}
-
-export function displayStatus(status: Membership['status'], expiryDateOrEndsAt: string): string {
+export function displayStatus(status: Membership['status'], expiryDateOrEndsAt: string | null | undefined): string {
   const safeStatus = status === 'cancelled' ? status : getMembershipStatus(expiryDateOrEndsAt);
   return getMembershipStatusLabel(safeStatus);
 }
 
-export function daysUntil(expiryDateOrEndsAt: string): number {
+export function daysUntil(expiryDateOrEndsAt: string | null | undefined): number | null {
   return getRemainingDays(expiryDateOrEndsAt);
 }
 
 export function getMembershipCountdown(membership: Pick<Membership, 'expiry_date' | 'ends_at'>): string {
-  const remaining = getRemainingDays(resolveExpiryDate(membership));
+  const remaining = getRemainingDays(resolveMembershipExpiryDate(membership));
   return getMembershipCountdownLabel(remaining);
 }
 

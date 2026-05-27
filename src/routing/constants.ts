@@ -3,7 +3,7 @@ export const routes = {
   home: '/(tabs)',
   explore: '/(tabs)/explore',
   profileHub: '/(tabs)/profile-hub',
-  memberships: '/memberships',
+  memberships: '/(tabs)/memberships',
   login: '/auth/login',
   signup: '/auth/signup',
   profileSetup: '/profile-setup',

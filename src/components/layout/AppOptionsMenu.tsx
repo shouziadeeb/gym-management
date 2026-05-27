@@ -1,20 +1,20 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Modal, Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
+import { ModalCard } from '@/components/ui/ModalCard';
 import { useTheme } from '@/hooks/useTheme';
 import { signOut } from '@/services/auth/auth.service';
 import { useAppStore } from '@/store/app.store';
 import { useAuthStore } from '@/store/auth.store';
 import { useProfileMenuStore } from '@/store/profile-menu.store';
 import { layout, text } from '@/theme/classes';
-import { cardSurface, modalOverlay } from '@/theme/styles';
 
 /** Theme, settings, and auth actions — available to guests and signed-in users. */
 export function AppOptionsMenu() {
-  const { colors, preference, setPreference } = useTheme();
+  const { preference, setPreference } = useTheme();
   const session = useAuthStore((state) => state.session);
   const resetGymContext = useAppStore((state) => state.resetGymContext);
   const showMenu = useProfileMenuStore((state) => state.isOpen);
@@ -32,93 +32,72 @@ export function AppOptionsMenu() {
 
   return (
     <>
-      <Modal visible={showMenu} transparent animationType="fade" onRequestClose={closeMenu}>
-        <Pressable className="flex-1" style={modalOverlay(colors)} onPress={closeMenu}>
-          <Pressable
-            className="mx-4 mt-24 rounded-2xl p-4"
-            style={cardSurface(colors, true)}
-            onPress={(event) => event.stopPropagation()}
-          >
-            <Text className={text.cardTitle}>App menu</Text>
-            <Text className={`${layout.stackSm} ${text.caption}`}>Appearance and account shortcuts.</Text>
+      <ModalCard visible={showMenu} onClose={closeMenu} anchor="top">
+        <Text className={text.cardTitle}>App menu</Text>
+        <Text className={`${layout.stackSm} ${text.caption}`}>Appearance and account shortcuts.</Text>
 
-            <Text className={`mt-3 ${text.label}`}>Theme</Text>
-            <View className="mt-2 flex-row flex-wrap gap-2">
-              <Chip label="System" active={preference === 'system'} onPress={() => setPreference('system')} />
-              <Chip label="Light" active={preference === 'light'} onPress={() => setPreference('light')} />
-              <Chip label="Dark" active={preference === 'dark'} onPress={() => setPreference('dark')} />
-            </View>
+        <Text className={`mt-3 ${text.label}`}>Theme</Text>
+        <View className="mt-2 flex-row flex-wrap gap-2">
+          <Chip label="System" active={preference === 'system'} onPress={() => setPreference('system')} />
+          <Chip label="Light" active={preference === 'light'} onPress={() => setPreference('light')} />
+          <Chip label="Dark" active={preference === 'dark'} onPress={() => setPreference('dark')} />
+        </View>
 
-            <View className="mt-4">
-              <Button
-                title="Open settings"
-                variant="ghost"
-                onPress={() => {
-                  closeMenu();
-                  router.push('/settings');
-                }}
-              />
-            </View>
+        <View className="mt-4">
+          <Button
+            title="Open settings"
+            variant="ghost"
+            onPress={() => {
+              closeMenu();
+              router.push('/settings');
+            }}
+          />
+        </View>
 
-            {isAuthenticated ? (
-              <View className="mt-2">
-                <Button
-                  title="Logout"
-                  variant="danger"
-                  onPress={() => {
-                    closeMenu();
-                    setShowLogoutConfirm(true);
-                  }}
-                />
-              </View>
-            ) : (
-              <View className="mt-2">
-                <Button
-                  title="Login"
-                  onPress={() => {
-                    closeMenu();
-                    router.push('/auth/login');
-                  }}
-                />
-              </View>
-            )}
-          </Pressable>
-        </Pressable>
-      </Modal>
+        {isAuthenticated ? (
+          <View className="mt-2">
+            <Button
+              title="Logout"
+              variant="danger"
+              onPress={() => {
+                closeMenu();
+                setShowLogoutConfirm(true);
+              }}
+            />
+          </View>
+        ) : (
+          <View className="mt-2">
+            <Button
+              title="Login"
+              onPress={() => {
+                closeMenu();
+                router.push('/auth/login');
+              }}
+            />
+          </View>
+        )}
+      </ModalCard>
 
-      <Modal
-        visible={showLogoutConfirm}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowLogoutConfirm(false)}
-      >
-        <Pressable className="flex-1" style={modalOverlay(colors)} onPress={() => setShowLogoutConfirm(false)}>
-          <Pressable
-            className="mx-4 mt-40 rounded-2xl p-4"
-            style={cardSurface(colors, true)}
-            onPress={(event) => event.stopPropagation()}
-          >
-            <Text className={text.cardTitle}>Confirm logout</Text>
-            <Text className={`${layout.stack} ${text.caption}`}>Are you sure you want to logout?</Text>
+      <ModalCard visible={showLogoutConfirm} onClose={() => setShowLogoutConfirm(false)} anchor="center">
+        <Text className={text.cardTitle}>Confirm logout</Text>
+        <Text className={`${layout.stack} ${text.caption}`}>Are you sure you want to logout?</Text>
 
-            <View className="mt-4 flex-row gap-2">
-              <View className="flex-1">
-                <Button title="Cancel" variant="ghost" onPress={() => setShowLogoutConfirm(false)} />
-              </View>
-              <View className="flex-1">
-                <Button
-                  title="Yes, Logout"
-                  variant="danger"
-                  onPress={async () => {
-                    setShowLogoutConfirm(false);
-                    await handleSignOut();
-                  }}
-                />
-              </View>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        <View className="mt-4 flex-row gap-2">
+          <View className="flex-1">
+            <Button title="Cancel" variant="ghost" onPress={() => setShowLogoutConfirm(false)} />
+          </View>
+          <View className="flex-1">
+            <Button
+              title="Yes, Logout"
+              variant="danger"
+              onPress={async () => {
+                setShowLogoutConfirm(false);
+                await handleSignOut();
+              }}
+            />
+          </View>
+        </View>
+      </ModalCard>
     </>
   );
 }

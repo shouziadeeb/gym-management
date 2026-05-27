@@ -1,37 +1,39 @@
-import { Platform } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSegments } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { screenLayout } from '@/theme/spacing';
+import {
+  screenScrollBottomPadding,
+  screenTopPadding,
+  shouldOmitTopSafeAreaForRoute,
+  stackContentTopGap,
+} from '@/lib/safe-area';
 
 type Options = {
-  /** Stack routes with {@link GlobalBackButton} already apply top inset — skip doubling it. */
+  /**
+   * Stack routes with {@link GlobalBackButton} already clear the status bar —
+   * skip top safe-area on Screen. When omitted, inferred from the active route.
+   */
   omitTopSafeArea?: boolean;
 };
 
 /**
- * Bottom inset for scroll content.
- *
- * - **Tab screens:** React Navigation already lays out the scene above the tab bar, so we only
- *   add a small end-of-scroll gap (no tab-bar height, no extra system inset).
- * - **Stack / modal screens:** Add system bottom inset (home indicator / Android nav) plus padding.
+ * Insets for {@link Screen} scroll content and safe-area edges.
  */
 export function useScreenContentInsets(options?: Options) {
   const insets = useSafeAreaInsets();
   const segments = useSegments();
   const inTabs = segments[0] === '(tabs)';
+  const omitTopSafeArea = options?.omitTopSafeArea ?? shouldOmitTopSafeAreaForRoute(segments);
 
-  const topInset = options?.omitTopSafeArea ? 0 : insets.top;
-
-  const webTabBottomPadding = Platform.OS === 'web' && inTabs ? screenLayout.screenPaddingBottom : 0;
-
-  const bottomInset = inTabs
-    ? screenLayout.scrollEndPadding + webTabBottomPadding
-    : screenLayout.screenPaddingBottom + insets.bottom;
+  const topInset = screenTopPadding(insets, omitTopSafeArea);
+  const bottomInset = screenScrollBottomPadding(insets, inTabs);
+  const contentTopGap = omitTopSafeArea ? stackContentTopGap : 0;
 
   return {
     topInset,
     bottomInset,
+    contentTopGap,
+    omitTopSafeArea,
     insets,
     inTabs,
   };

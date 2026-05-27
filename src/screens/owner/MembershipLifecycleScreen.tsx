@@ -113,7 +113,11 @@ export function MembershipLifecycleScreen() {
             <Text className={`${layout.stackSm} ${text.caption}`}>Plan: {membership.plan_type}</Text>
             <Text className={`${layout.stackSm} ${text.caption}`}>Payment: {membership.payment_status}</Text>
             <View className={layout.stack}>
-              <MembershipStatusBadge status={membership.status} expiryDate={membership.expiry_date} />
+              <MembershipStatusBadge
+                status={membership.status}
+                expiryDate={membership.expiry_date}
+                endsAt={membership.ends_at}
+              />
             </View>
             <View className={layout.stackSm}>
               <MembershipCountdown membership={membership} />

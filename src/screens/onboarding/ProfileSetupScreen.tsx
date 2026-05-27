@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/Button';
 import { DatePickerField } from '@/components/ui/DatePickerField';
 import { Input } from '@/components/ui/Input';
 import { LocationPickerField } from '@/components/ui/LocationPickerField';
-import { Screen } from '@/components/ui/Screen';
+import { OnboardingFormPanel } from '@/components/onboarding/OnboardingFormPanel';
+import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen';
 import { SelectField } from '@/components/ui/SelectField';
 import { buildDefaultDisplayName } from '@/domain/profiles';
 import { PROFILE_GENDER_OPTIONS, ageFromDateOfBirth } from '@/features/profile/labels';
@@ -131,13 +132,14 @@ export function ProfileSetupScreen() {
   }
 
   return (
-    <Screen scroll>
-      <Text className={`${layout.screenTop} ${text.screenTitle}`}>Set up your profile</Text>
-      <Text className={`${layout.stack} ${text.screenSubtitle}`}>
-        Complete your profile once to personalize memberships, onboarding, and gym actions.
-      </Text>
+    <OnboardingScreen scroll>
+      <OnboardingFormPanel>
+        <Text className={text.screenTitle}>Set up your profile</Text>
+        <Text className={`${layout.stack} ${text.screenSubtitle}`}>
+          Complete your profile once to personalize memberships, onboarding, and gym actions.
+        </Text>
 
-      <View className={layout.sectionXl}>
+        <View className={layout.sectionXl}>
         <Controller
           control={form.control}
           name="phone"
@@ -221,7 +223,8 @@ export function ProfileSetupScreen() {
         {form.formState.errors.root?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.root.message}</Text> : null}
 
         <Button title="Complete setup" onPress={submit} loading={form.formState.isSubmitting} />
-      </View>
-    </Screen>
+        </View>
+      </OnboardingFormPanel>
+    </OnboardingScreen>
   );
 }

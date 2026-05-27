@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
+import { ModalCard } from '@/components/ui/ModalCard';
 import { formatDateLabel, parseIsoDate, toIsoDateString } from '@/features/profile/labels';
 import { useTheme } from '@/hooks/useTheme';
 import { layout, surfaces, text } from '@/theme/classes';
-import { cardSurface, modalOverlay, textColor } from '@/theme/styles';
+import { cardSurface, textColor } from '@/theme/styles';
 
 type Props = {
   label: string;
@@ -105,13 +106,7 @@ export function DatePickerField({
         <Text style={{ color: value ? colors.foreground : colors.placeholder }}>{displayValue}</Text>
       </Pressable>
 
-      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable className="flex-1" style={modalOverlay(colors)} onPress={() => setOpen(false)}>
-          <Pressable
-            className="mx-4 mt-24 rounded-2xl p-4"
-            style={cardSurface(colors, true)}
-            onPress={(event) => event.stopPropagation()}
-          >
+      <ModalCard visible={open} onClose={() => setOpen(false)} anchor="center">
             <Text className={`mb-3 ${text.cardTitle}`}>{label}</Text>
 
             <Text className={`mb-1 ${text.label}`} style={{ color: textColor(colors, 'muted') }}>
@@ -173,9 +168,7 @@ export function DatePickerField({
                 </Pressable>
               </View>
             </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      </ModalCard>
     </View>
   );
 }
