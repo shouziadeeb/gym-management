@@ -14,6 +14,7 @@ import { GymLogo } from '@/components/gym/GymLogo';
 import { MemberRequestCard } from '@/components/member/MemberRequestCard';
 import { MembershipCountdown } from '@/components/membership/MembershipCountdown';
 import { MembershipStatusBadge } from '@/components/MembershipStatusBadge';
+import { OwnerMembershipHubCard } from '@/components/owner/OwnerMembershipHubCard';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
@@ -134,8 +135,24 @@ export function MemberHomeScreen() {
 
   return (
     <Screen scroll refreshing={isRefreshing} onRefresh={() => void handleRefresh()}>
-      <Text className={`${layout.screenTop} ${text.screenTitleLg}`}>My membership</Text>
-      {gym ? <Text className={text.caption}>{gym.name}</Text> : null}
+      <Text className={`${layout.screenTop} ${text.screenTitleLg}`}>
+        {isOwnerModeUser ? 'Memberships' : 'My membership'}
+      </Text>
+      {isOwnerModeUser ? (
+        <Text className={`${layout.stackSm} ${text.caption}`}>
+          Manage gym members, attendance, and your own memberships.
+        </Text>
+      ) : gym ? (
+        <Text className={text.caption}>{gym.name}</Text>
+      ) : null}
+
+      {isOwnerModeUser ? (
+        <OwnerMembershipHubCard ownedGyms={ownedGyms} memberGymCount={memberGyms.length} />
+      ) : null}
+
+      {isOwnerModeUser && memberGyms.length > 0 ? (
+        <Text className={`${layout.section} ${text.listTitle}`}>My gym membership</Text>
+      ) : null}
 
       {!isOwnerModeUser ? (
         <Card title="Gym Invitations">
@@ -212,10 +229,16 @@ export function MemberHomeScreen() {
             />
           </View>
         </Card>
-      ) : !membershipQuery.isLoading ? (
+      ) : !membershipQuery.isLoading && !isOwnerModeUser ? (
         <Card title="No active record">
           <Text className={text.caption}>
             Ask your gym owner to connect your profile or refresh your membership.
+          </Text>
+        </Card>
+      ) : !membershipQuery.isLoading && isOwnerModeUser && memberGyms.length === 0 ? (
+        <Card title="No member gyms">
+          <Text className={text.caption}>
+            You have not joined any gym as a member. Use Gym management above to add and manage members at your gym.
           </Text>
         </Card>
       ) : null}

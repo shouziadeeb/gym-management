@@ -4,7 +4,7 @@ import { FlatList, StyleSheet, View, type LayoutChangeEvent } from 'react-native
 import type { GymCardPresentation } from '@/domain/discovery/types';
 
 import { GymDiscoverCard } from '@/components/discovery/GymDiscoverCard';
-import { carouselPageStyle, webFullBleedRailStyle, webHorizontalPagingStyle } from '@/lib/web-layout';
+import { carouselPageStyle, webFullBleedClipStyle, webHorizontalPagingStyle } from '@/lib/web-layout';
 
 type Props = {
   items: GymCardPresentation[];
@@ -32,7 +32,7 @@ export function HorizontalGymRail({ items, onPressGym, cardWidth: cardWidthProp 
   const cardWidth = cardWidthProp ?? Math.max(260, railWidth - RAIL_INSET_TOTAL);
 
   return (
-    <View style={webFullBleedRailStyle} onLayout={onRailLayout}>
+    <View style={webFullBleedClipStyle} onLayout={onRailLayout}>
       {railWidth > 0 ? (
         <FlatList
           horizontal

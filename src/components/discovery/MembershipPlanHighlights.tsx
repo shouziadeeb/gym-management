@@ -1,10 +1,11 @@
 import { memo } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { router } from 'expo-router';
 
 import type { MembershipPlanHighlight } from '@/domain/discovery/home-feed';
 
 import { Button } from '@/components/ui/Button';
+import { FullWidthHorizontalScroll } from '@/components/ui/FullWidthHorizontalScroll';
 import { layout, surfaces, text } from '@/theme/classes';
 import { cardSurface } from '@/theme/styles';
 import { useTheme } from '@/hooks/useTheme';
@@ -17,11 +18,7 @@ export const MembershipPlanHighlights = memo(function MembershipPlanHighlights({
   const { colors } = useTheme();
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ gap: 12, paddingHorizontal: 16, paddingVertical: 4 }}
-    >
+    <FullWidthHorizontalScroll gap={12}>
       {plans.map((plan) => (
         <View
           key={plan.id}
@@ -36,6 +33,6 @@ export const MembershipPlanHighlights = memo(function MembershipPlanHighlights({
           </View>
         </View>
       ))}
-    </ScrollView>
+    </FullWidthHorizontalScroll>
   );
 });

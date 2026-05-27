@@ -50,11 +50,22 @@ export type OwnerAttendanceRow = {
   member_name: string | null;
   member_phone: string | null;
   avatar_url: string | null;
+  membership_status?: string | null;
   attendance_date: string;
   attendance_time: string;
   scanned_token: string | null;
   created_at: string;
   total_count?: number;
+};
+
+export type AttendanceHistorySort = 'newest' | 'oldest' | 'name_asc' | 'checkin_latest';
+
+export type AttendanceHistoryFilters = {
+  from?: string;
+  to?: string;
+  memberId?: string;
+  search?: string;
+  sort?: AttendanceHistorySort;
 };
 
 export type MemberAttendanceRow = {
@@ -65,10 +76,4 @@ export type MemberAttendanceRow = {
   attendance_time: string;
   created_at: string;
   total_count?: number;
-};
-
-export type AttendanceHistoryFilters = {
-  from?: string;
-  to?: string;
-  memberId?: string;
 };

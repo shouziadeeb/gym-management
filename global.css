@@ -31,13 +31,15 @@ body {
 }
 
 /* RN Web horizontal lists: prevent flex-shrink showing multiple slides. */
-[data-rnw-carousel='paging'] {
+[data-rnw-carousel='paging'],
+[data-rnw-carousel='chips'] {
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-[data-rnw-carousel='paging']::-webkit-scrollbar {
+[data-rnw-carousel='paging']::-webkit-scrollbar,
+[data-rnw-carousel='chips']::-webkit-scrollbar {
   display: none;
 }
 [data-rnw-carousel='paging'] > div {

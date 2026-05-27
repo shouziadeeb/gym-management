@@ -16,6 +16,9 @@ export const routes = {
   attendance: '/attendance',
   attendanceScan: '/attendance-scan',
   attendanceHistory: '/attendance-history',
+  attendanceQr: '/attendance-qr',
+  attendanceOwnerHistory: '/attendance-owner-history',
+  attendanceAnalytics: '/attendance-analytics',
   bookings: '/bookings',
   gymDetail: (id: string) => `/gym/${id}` as const,
 } as const;

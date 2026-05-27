@@ -1,14 +1,13 @@
-import { SectionList, View } from 'react-native';
-import type { SectionListRenderItem } from 'react-native';
+import { FlatList, View } from 'react-native';
+import type { ListRenderItem } from 'react-native';
 
-import { AttendanceDateGroup } from '@/features/attendance/components/AttendanceDateGroup';
 import { AttendanceHistoryItem } from '@/features/attendance/components/AttendanceHistoryItem';
-import type { AttendanceDateSection } from '@/features/attendance/domain/group-by-date';
 import type { OwnerAttendanceRow } from '@/features/attendance/types';
 import { screenLayout, spacing } from '@/theme/spacing';
 
 type Props = {
-  sections: AttendanceDateSection[];
+  rows: OwnerAttendanceRow[];
+  showPhone?: boolean;
   onRowMorePress?: (row: OwnerAttendanceRow) => void;
   onEndReached?: () => void;
   ListHeaderComponent?: React.ComponentType<unknown> | React.ReactElement | null;
@@ -17,11 +16,10 @@ type Props = {
   refreshing?: boolean;
   onRefresh?: () => void;
   contentPaddingBottom?: number;
-  stickySectionHeaders?: boolean;
 };
 
-export function AttendanceGroupedHistoryList({
-  sections,
+export function AttendanceHistoryList({
+  rows,
   onRowMorePress,
   onEndReached,
   ListHeaderComponent,
@@ -30,30 +28,22 @@ export function AttendanceGroupedHistoryList({
   refreshing,
   onRefresh,
   contentPaddingBottom = spacing[4],
-  stickySectionHeaders = true,
 }: Props) {
-  const renderItem: SectionListRenderItem<OwnerAttendanceRow, AttendanceDateSection> = ({ item }) => (
+  const renderItem: ListRenderItem<OwnerAttendanceRow> = ({ item }) => (
     <AttendanceHistoryItem row={item} onMorePress={onRowMorePress ? () => onRowMorePress(item) : undefined} />
   );
 
-  const renderSectionHeader = ({ section }: { section: AttendanceDateSection }) => (
-    <AttendanceDateGroup title={section.title} count={section.data.length} />
-  );
-
   return (
-    <SectionList
-      sections={sections}
+    <FlatList
+      data={rows}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
-      renderSectionHeader={renderSectionHeader}
-      stickySectionHeadersEnabled={stickySectionHeaders}
       ItemSeparatorComponent={() => <View style={{ height: spacing[2] }} />}
-      SectionSeparatorComponent={() => <View style={{ height: spacing[1] }} />}
       ListHeaderComponent={ListHeaderComponent}
       ListEmptyComponent={ListEmptyComponent}
       ListFooterComponent={ListFooterComponent}
       onEndReached={onEndReached}
-      onEndReachedThreshold={0.35}
+      onEndReachedThreshold={0.4}
       refreshing={refreshing}
       onRefresh={onRefresh}
       contentContainerStyle={{
@@ -66,5 +56,5 @@ export function AttendanceGroupedHistoryList({
   );
 }
 
-/** Flat list variant for dashboard today view */
-export { AttendanceHistoryList } from '@/features/attendance/components/AttendanceFlatHistoryList';
+export { AttendanceHistoryItem as OwnerAttendanceRowCard } from '@/features/attendance/components/AttendanceHistoryItem';
+export { MemberAttendanceRowCard } from '@/features/attendance/components/MemberAttendanceRowCard';

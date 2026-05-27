@@ -88,6 +88,9 @@ export default function RootLayout() {
               <Stack.Screen name="manage-members" />
               <Stack.Screen name="analytics" />
               <Stack.Screen name="attendance" />
+              <Stack.Screen name="attendance-qr" />
+              <Stack.Screen name="attendance-owner-history" />
+              <Stack.Screen name="attendance-analytics" />
               <Stack.Screen name="attendance-scan" />
               <Stack.Screen name="attendance-history" />
               <Stack.Screen name="membership-lifecycle" />

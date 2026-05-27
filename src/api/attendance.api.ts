@@ -1,6 +1,7 @@
 import { format } from 'date-fns';
 
 import { ATTENDANCE_PAGE_SIZE } from '@/features/attendance/constants';
+import { applyClientAttendanceHistoryFilters } from '@/features/attendance/domain/history-query';
 import type {
   AttendanceHistoryFilters,
   AttendanceMarkResult,
@@ -10,6 +11,7 @@ import type {
 } from '@/features/attendance/types';
 import { normalizeAttendanceMarkResult } from '@/features/attendance/domain/validate-scan';
 import { supabase } from '@/lib/supabase';
+import { isMissingRpcError } from '@/utils/supabase-errors';
 
 export async function fetchGymAttendanceSettings(gymId: string): Promise<GymAttendanceSettings> {
   const { data, error } = await supabase
@@ -76,6 +78,34 @@ export async function fetchTodayAttendance(gymId: string, date?: string): Promis
   return (data ?? []) as OwnerAttendanceRow[];
 }
 
+function resolveHistoryTotal(rows: OwnerAttendanceRow[], fallback = 0): number {
+  const counted = rows[0]?.total_count;
+  if (typeof counted === 'number' && counted > 0) return Number(counted);
+  return rows.length > 0 ? rows.length : fallback;
+}
+
+async function fetchLegacyGymAttendanceHistory(
+  gymId: string,
+  filters: AttendanceHistoryFilters,
+  page: number,
+  pageSize: number,
+): Promise<{ rows: OwnerAttendanceRow[]; total: number }> {
+  const { data, error } = await supabase.rpc('get_gym_attendance_history', {
+    p_gym_id: gymId,
+    p_from: filters.from ?? null,
+    p_to: filters.to ?? null,
+    p_member_id: filters.memberId ?? null,
+    p_limit: pageSize,
+    p_offset: (page - 1) * pageSize,
+  });
+  if (error) throw error;
+
+  const rawRows = (data ?? []) as OwnerAttendanceRow[];
+  const rows = applyClientAttendanceHistoryFilters(rawRows, filters);
+  const total = resolveHistoryTotal(rawRows, rows.length);
+  return { rows, total: filters.search ? rows.length : total };
+}
+
 export async function fetchGymAttendanceHistory(
   gymId: string,
   filters: AttendanceHistoryFilters = {},
@@ -87,12 +117,19 @@ export async function fetchGymAttendanceHistory(
     p_from: filters.from ?? null,
     p_to: filters.to ?? null,
     p_member_id: filters.memberId ?? null,
+    p_search: filters.search?.trim() || null,
+    p_sort: filters.sort ?? 'newest',
     p_limit: pageSize,
     p_offset: (page - 1) * pageSize,
   });
+
+  if (error && isMissingRpcError(error)) {
+    return fetchLegacyGymAttendanceHistory(gymId, filters, page, pageSize);
+  }
   if (error) throw error;
+
   const rows = (data ?? []) as OwnerAttendanceRow[];
-  const total = rows[0]?.total_count ? Number(rows[0].total_count) : 0;
+  const total = resolveHistoryTotal(rows);
   return { rows, total };
 }
 

@@ -10,7 +10,7 @@ export const webFullWidthStyle: ViewStyle = isWeb
     } as ViewStyle)
   : {};
 
-/** Scroll containers on RN Web: clip horizontal bleed and hide scrollbars. */
+/** Scroll containers on RN Web: full width; clip horizontal bleed so rails don't shift layout. */
 export const webScrollContainerStyle: ViewStyle = isWeb
   ? ({
       ...webFullWidthStyle,
@@ -19,11 +19,29 @@ export const webScrollContainerStyle: ViewStyle = isWeb
       msOverflowStyle: 'none',
     } as ViewStyle)
   : {};
+
 /** Wrapper for full-bleed horizontal rails that break out of screen padding. */
 export const webFullBleedRailStyle: ViewStyle = {
   overflow: 'hidden',
   ...webFullWidthStyle,
 };
+
+/** Clip variant for carousels that should not paint outside their viewport. */
+export const webFullBleedClipStyle: ViewStyle = webFullBleedRailStyle;
+
+/**
+ * Break out of parent horizontal padding for edge-to-edge horizontal scroll.
+ * Uses negative margins only — avoid calc() widths on web, which shift the page layout.
+ */
+export function fullBleedHorizontalStyle(edgePadding: number): ViewStyle {
+  return {
+    marginLeft: -edgePadding,
+    marginRight: -edgePadding,
+    alignSelf: 'stretch',
+    overflow: 'hidden',
+    ...(isWeb ? ({ minWidth: 0 } as ViewStyle) : null),
+  };
+}
 /** Fixed-width carousel page — prevents flex-shrink showing multiple slides on web. */
 export function carouselPageStyle(pageWidth: number): ViewStyle {
   return {

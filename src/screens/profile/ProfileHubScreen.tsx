@@ -14,7 +14,6 @@ import { useAppStore } from '@/store/app.store';
 import { useAuthStore } from '@/store/auth.store';
 import { useProfileMenuStore } from '@/store/profile-menu.store';
 import { layout, text } from '@/theme/classes';
-import { spacing } from '@/theme/spacing';
 
 export function ProfileHubScreen() {
   const { colors } = useTheme();
@@ -23,7 +22,7 @@ export function ProfileHubScreen() {
   const activeOwnerGymId = useAppStore((state) => state.activeOwnerGymId);
   const setActiveOwnerGymId = useAppStore((state) => state.setActiveOwnerGymId);
   const myProfileQuery = useMyProfile();
-  const { memberGyms, ownedGyms } = useUserGyms();
+  const { ownedGyms } = useUserGyms();
   const openMenu = useProfileMenuStore((state) => state.open);
 
   const isAuthenticated = Boolean(session);
@@ -40,7 +39,7 @@ export function ProfileHubScreen() {
         <Text className={text.screenTitle}>Profile</Text>
         <Text className={`${layout.stack} ${text.screenSubtitle}`}>
           {isAuthenticated
-            ? 'Manage account, memberships, and owner actions.'
+            ? 'Manage your account and gym settings.'
             : 'Sign in to unlock memberships, bookings, and owner tools.'}
         </Text>
       </View>
@@ -104,44 +103,6 @@ export function ProfileHubScreen() {
             <View className={layout.buttonSpacing} />
             <Button title="My profile" variant="ghost" onPress={() => router.push('/profile')} />
           </Card>
-
-          {ownedGyms.length > 0 ? (
-            <Card title="Membership overview">
-              <Text className={text.caption}>Joined gyms: {memberGyms.length}</Text>
-              <Text className={`${layout.stackSm} ${text.caption}`}>Owned gyms: {ownedGyms.length}</Text>
-              <View className={layout.vstack} style={{ gap: spacing[3], marginTop: spacing[3] }}>
-                <View className={`${layout.row} w-full`} style={{ gap: spacing[2] }}>
-                  <View className={layout.flex1}>
-                    <Button
-                      title="Add Member"
-                      onPress={() => {
-                        setAppMode('owner');
-                        router.push('/manage-members?view=add_member');
-                      }}
-                    />
-                  </View>
-                  <View className={layout.flex1}>
-                    <Button
-                      title="Members"
-                      variant="ghost"
-                      onPress={() => {
-                        setAppMode('owner');
-                        router.push('/manage-members?view=current_members');
-                      }}
-                    />
-                  </View>
-                </View>
-                <Button
-                  title="Attendance dashboard"
-                  variant="ghost"
-                  onPress={() => {
-                    setAppMode('owner');
-                    router.push('/attendance');
-                  }}
-                />
-              </View>
-            </Card>
-          ) : null}
 
           <OwnerGymProfileCard
             ownedGyms={ownedGyms}

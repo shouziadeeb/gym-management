@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { PROMO_CAMPAIGNS } from '@/constants/gym-discovery';
 import { layout, text } from '@/theme/classes';
 import { screenLayout } from '@/theme/spacing';
-import { carouselPageStyle, webFullBleedRailStyle, webHorizontalPagingStyle } from '@/lib/web-layout';
+import { carouselPageStyle, fullBleedHorizontalStyle, webHorizontalPagingStyle } from '@/lib/web-layout';
 
 const TILE_GAP = 12;
 
@@ -24,7 +24,7 @@ export const PromoBannerCarousel = memo(function PromoBannerCarousel() {
   const tileWidth = Math.max(280, railWidth - edgePadding * 2);
 
   return (
-    <View style={[{ marginHorizontal: -edgePadding }, webFullBleedRailStyle]} onLayout={onRailLayout}>
+    <View style={fullBleedHorizontalStyle(edgePadding)} onLayout={onRailLayout}>
       {railWidth > 0 ? (
         <ScrollView
           horizontal

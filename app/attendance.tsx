@@ -1,5 +1,5 @@
 import { ProtectedRoute, routes } from '@/routing';
-import { OwnerAttendanceScreen } from '@/screens/owner/OwnerAttendanceScreen';
+import { OwnerAttendanceDashboardScreen } from '@/screens/owner/OwnerAttendanceDashboardScreen';
 
 export default function AttendanceRoute() {
   return (
@@ -9,7 +9,7 @@ export default function AttendanceRoute() {
       requireProfile
       requireOwner
     >
-      <OwnerAttendanceScreen />
+      <OwnerAttendanceDashboardScreen />
     </ProtectedRoute>
   );
 }
