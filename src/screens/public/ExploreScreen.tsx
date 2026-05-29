@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -7,15 +7,15 @@ import {
   StyleSheet,
   Text,
   View,
-} from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+} from "react-native";
+import { router, useLocalSearchParams } from "expo-router";
 
-import { DiscoveryEmptyState } from '@/components/discovery/DiscoveryEmptyState';
-import { ExploreFeaturedGymCard } from '@/components/discovery/explore/ExploreFeaturedGymCard';
-import { ExploreFiltersBlock } from '@/components/discovery/explore/ExploreFiltersBlock';
-import { ExploreGymListRow } from '@/components/discovery/explore/ExploreGymListRow';
-import { GymDiscoverCardSkeleton } from '@/components/discovery/GymDiscoverCardSkeleton';
-import { Screen, useScreenScrollBottomPadding } from '@/components/ui/Screen';
+import { DiscoveryEmptyState } from "@/components/discovery/DiscoveryEmptyState";
+import { ExploreFeaturedGymCard } from "@/components/discovery/explore/ExploreFeaturedGymCard";
+import { ExploreFiltersBlock } from "@/components/discovery/explore/ExploreFiltersBlock";
+import { ExploreGymListRow } from "@/components/discovery/explore/ExploreGymListRow";
+import { GymDiscoverCardSkeleton } from "@/components/discovery/GymDiscoverCardSkeleton";
+import { Screen, useScreenScrollBottomPadding } from "@/components/ui/Screen";
 import {
   DEFAULT_EXPLORE_SORT,
   EXPLORE_SEARCH_DEBOUNCE_MS,
@@ -23,18 +23,19 @@ import {
   RATING_FILTERS,
   parseExploreSortMode,
   type ExploreSortMode,
-} from '@/constants/gym-discovery';
-import type { GymCardPresentation } from '@/domain/discovery/types';
-import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { useExploreMarketplace } from '@/hooks/useExploreMarketplace';
-import { useTheme } from '@/hooks/useTheme';
-import { webScrollContainerStyle } from '@/lib/web-layout';
-import { appendSearchHistoryTerm } from '@/services/discovery/preferences.storage';
-import { spacing } from '@/theme/spacing';
+} from "@/constants/gym-discovery";
+import type { GymCardPresentation } from "@/domain/discovery/types";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useExploreMarketplace } from "@/hooks/useExploreMarketplace";
+import { useTheme } from "@/hooks/useTheme";
+import { webScrollContainerStyle } from "@/lib/web-layout";
+import { appendSearchHistoryTerm } from "@/services/discovery/preferences.storage";
+import { spacing } from "@/theme/spacing";
 
 function firstParam(raw: string | string[] | undefined): string | undefined {
-  if (typeof raw === 'string') return raw.trim() || undefined;
-  if (Array.isArray(raw) && typeof raw[0] === 'string') return raw[0].trim() || undefined;
+  if (typeof raw === "string") return raw.trim() || undefined;
+  if (Array.isArray(raw) && typeof raw[0] === "string")
+    return raw[0].trim() || undefined;
   return undefined;
 }
 
@@ -45,9 +46,13 @@ type RouteParams = {
   price?: string | string[];
 };
 
-function pickFeaturedGym(cards: GymCardPresentation[]): GymCardPresentation | null {
+function pickFeaturedGym(
+  cards: GymCardPresentation[],
+): GymCardPresentation | null {
   if (!cards.length) return null;
-  const withImage = cards.find((gym) => (gym.imageUrls[0] ?? gym.imageUrl) != null);
+  const withImage = cards.find(
+    (gym) => (gym.imageUrls[0] ?? gym.imageUrl) != null,
+  );
   return withImage ?? cards[0];
 }
 
@@ -56,10 +61,10 @@ export function ExploreScreen() {
   const scrollBottomPadding = useScreenScrollBottomPadding();
   const params = useLocalSearchParams<RouteParams>();
 
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
-  const [ratingPresetId, setRatingPresetId] = useState('any');
-  const [pricePresetId, setPricePresetId] = useState('any');
+  const [ratingPresetId, setRatingPresetId] = useState("any");
+  const [pricePresetId, setPricePresetId] = useState("any");
   const [sort, setSort] = useState<ExploreSortMode>(DEFAULT_EXPLORE_SORT);
 
   useEffect(() => {
@@ -72,10 +77,13 @@ export function ExploreScreen() {
     setCategories(incomingCategory ? [incomingCategory] : []);
 
     const priceTag = firstParam(params.price);
-    if (priceTag && PRICE_PRESETS_INR_MONTHLY_MIN.some((tier) => tier.id === priceTag)) {
+    if (
+      priceTag &&
+      PRICE_PRESETS_INR_MONTHLY_MIN.some((tier) => tier.id === priceTag)
+    ) {
       setPricePresetId(priceTag);
     } else if (!priceTag) {
-      setPricePresetId('any');
+      setPricePresetId("any");
     }
   }, [params.q, params.sort, params.category, params.price]);
 
@@ -93,7 +101,10 @@ export function ExploreScreen() {
   );
 
   const monthlyFeeMax = useMemo(() => {
-    return PRICE_PRESETS_INR_MONTHLY_MIN.find((tier) => tier.id === pricePresetId)?.maxCents ?? null;
+    return (
+      PRICE_PRESETS_INR_MONTHLY_MIN.find((tier) => tier.id === pricePresetId)
+        ?.maxCents ?? null
+    );
   }, [pricePresetId]);
 
   const explore = useExploreMarketplace({
@@ -106,11 +117,16 @@ export function ExploreScreen() {
   });
 
   const priceHintLabel = useMemo(
-    () => PRICE_PRESETS_INR_MONTHLY_MIN.find((tier) => tier.id === pricePresetId)?.label ?? null,
+    () =>
+      PRICE_PRESETS_INR_MONTHLY_MIN.find((tier) => tier.id === pricePresetId)
+        ?.label ?? null,
     [pricePresetId],
   );
 
-  const featuredGym = useMemo(() => pickFeaturedGym(explore.cards), [explore.cards]);
+  const featuredGym = useMemo(
+    () => pickFeaturedGym(explore.cards),
+    [explore.cards],
+  );
 
   const listGyms = useMemo(() => {
     if (!featuredGym) return explore.cards;
@@ -119,17 +135,19 @@ export function ExploreScreen() {
 
   const toggleCategory = useCallback((slug: string) => {
     setCategories((existing) =>
-      existing.includes(slug) ? existing.filter((entry) => entry !== slug) : [...existing, slug],
+      existing.includes(slug)
+        ? existing.filter((entry) => entry !== slug)
+        : [...existing, slug],
     );
   }, []);
 
   const clearFilters = useCallback(() => {
-    setSearch('');
+    setSearch("");
     setCategories([]);
-    setRatingPresetId('any');
-    setPricePresetId('any');
+    setRatingPresetId("any");
+    setPricePresetId("any");
     setSort(DEFAULT_EXPLORE_SORT);
-    router.replace('/(tabs)/explore');
+    router.replace("/(tabs)/explore");
   }, []);
 
   const openGym = useCallback((id: string) => {
@@ -140,7 +158,7 @@ export function ExploreScreen() {
     ({ item }: { item: GymCardPresentation }) => (
       <ExploreGymListRow
         gym={item}
-        priceHint={pricePresetId !== 'any' ? priceHintLabel : null}
+        priceHint={pricePresetId !== "any" ? priceHintLabel : null}
         onPress={() => openGym(item.id)}
       />
     ),
@@ -149,7 +167,9 @@ export function ExploreScreen() {
 
   const listHeader = (
     <View style={styles.header}>
-      <Text style={[styles.title, { color: colors.foreground }]}>Explore gyms</Text>
+      <Text style={[styles.title, { color: colors.foreground }]}>
+        Explore gyms
+      </Text>
       <Text style={[styles.subtitle, { color: colors.muted }]}>
         Search with filters and performance metrics.
       </Text>
@@ -186,7 +206,10 @@ export function ExploreScreen() {
       ) : null}
 
       {featuredGym && !explore.isInitialLoading ? (
-        <ExploreFeaturedGymCard gym={featuredGym} onPress={() => openGym(featuredGym.id)} />
+        <ExploreFeaturedGymCard
+          gym={featuredGym}
+          onPress={() => openGym(featuredGym.id)}
+        />
       ) : null}
     </View>
   );
@@ -205,7 +228,10 @@ export function ExploreScreen() {
     );
   }
 
-  const listScrollStyle = Platform.OS === 'web' ? ({ flex: 1, ...webScrollContainerStyle } as const) : { flex: 1 };
+  const listScrollStyle =
+    Platform.OS === "web"
+      ? ({ flex: 1, ...webScrollContainerStyle } as const)
+      : { flex: 1 };
 
   return (
     <Screen>
@@ -213,13 +239,20 @@ export function ExploreScreen() {
         data={listGyms}
         renderItem={renderListItem}
         keyExtractor={(item) => item.id}
-        nativeID={Platform.OS === 'web' ? 'exploreMarketplaceFlatListScroll' : undefined}
+        nativeID={
+          Platform.OS === "web" ? "exploreMarketplaceFlatListScroll" : undefined
+        }
         style={listScrollStyle}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={listHeader}
         contentContainerStyle={{ paddingBottom: scrollBottomPadding }}
         ItemSeparatorComponent={() => <View style={{ height: spacing[3] }} />}
-        refreshControl={<RefreshControl refreshing={explore.isRefetching} onRefresh={explore.refetch} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={explore.isRefetching}
+            onRefresh={explore.refetch}
+          />
+        }
         onEndReachedThreshold={0.45}
         onEndReached={() => explore.fetchNext()}
         ListEmptyComponent={
@@ -250,7 +283,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   subtitle: {
     fontSize: 14,
@@ -259,7 +292,7 @@ const styles = StyleSheet.create({
   },
   count: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: 1,
     marginTop: spacing[3],
     marginBottom: spacing[3],
