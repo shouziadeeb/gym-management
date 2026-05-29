@@ -1,10 +1,11 @@
 import { memo, useMemo } from 'react';
-import { Platform, Pressable, Text, View } from 'react-native';
-import { ImageCarousel } from '@/components/gym/ImageCarousel';
-import type { GymCardPresentation } from '@/domain/discovery/types';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { layout, text, badges } from '@/theme/classes';
+import { ImageCarousel } from '@/components/gym/ImageCarousel';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import type { GymCardPresentation } from '@/domain/discovery/types';
 import { useTheme } from '@/hooks/useTheme';
+import { spacing } from '@/theme/spacing';
 
 export type GymDiscoverCardProps = {
   gym: GymCardPresentation;
@@ -45,13 +46,16 @@ export const GymDiscoverCard = memo(function GymDiscoverCard({
 
   return (
     <View
-      className={`${layout.cardSpacing} rounded-3xl border px-4 py-3`}
-      style={{
-        borderColor: colors.border,
-        backgroundColor: colors.card,
-        ...cardStyle,
-      }}
-    >      <View className="overflow-hidden rounded-2xl border" style={{ borderColor: colors.border }}>
+      style={[
+        styles.card,
+        {
+          borderColor: colors.border,
+          backgroundColor: colors.card,
+        },
+        cardStyle,
+      ]}
+    >
+      <View style={[styles.imageFrame, { borderColor: colors.border }]}>
         {imageUrls.length > 0 ? (
           <ImageCarousel
             imageUrls={imageUrls}
@@ -63,10 +67,8 @@ export const GymDiscoverCard = memo(function GymDiscoverCard({
             dotPlacement="overlay"
           />
         ) : (
-          <View className="items-center justify-center" style={{ height: imageHeight, backgroundColor: colors.muted }}>
-            <Text className={text.caption} style={{ color: colors.foregroundSecondary }}>
-              Image coming soon
-            </Text>
+          <View style={[styles.imagePlaceholder, { height: imageHeight, backgroundColor: colors.chipInactive }]}>
+            <Text style={[styles.caption, { color: colors.foregroundSecondary }]}>Image coming soon</Text>
           </View>
         )}
       </View>
@@ -75,46 +77,119 @@ export const GymDiscoverCard = memo(function GymDiscoverCard({
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={`Open ${gym.name}`}
-        className={layout.stackMd}
+        style={styles.body}
       >
-        <View className={`${layout.rowBetween} flex-wrap gap-3`}>
-          <Text className={`${text.cardTitle} flex-1 pr-4`}>{gym.name}</Text>
+        <View style={styles.titleRow}>
+          <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={2}>
+            {gym.name}
+          </Text>
           {!gym.isActiveListing ? (
-            <View className={`${badges.cancelled} ${badges.container}`}>
-              <Text className={`${text.bodySm} capitalize`}>Paused</Text>
-            </View>
+            <StatusBadge label="Paused" tone="cancelled" />
           ) : (
-            <View className={`${badges.active} ${badges.container}`}>
-              <Text className={text.bodySm}>Open</Text>
-            </View>
+            <StatusBadge label="Open" tone="active" />
           )}
         </View>
 
         {gym.addressLine ? (
-          <Text numberOfLines={2} className={`${text.caption} ${layout.flex1}`}>
+          <Text style={[styles.caption, { color: colors.muted }]} numberOfLines={2}>
             {gym.addressLine}
           </Text>
         ) : null}
 
-        <View className={`${layout.row} flex-wrap`}>
-          <Text className={`${text.bodySm} mr-4`}>{ratingLabel}</Text>
-          {gym.distanceLabel ? <Text className={text.meta}>{gym.distanceLabel}</Text> : null}
+        <View style={styles.metaRow}>
+          <Text style={[styles.bodySm, styles.metaItem, { color: colors.foreground }]}>{ratingLabel}</Text>
+          {gym.distanceLabel ? (
+            <Text style={[styles.bodySm, { color: colors.muted }]}>{gym.distanceLabel}</Text>
+          ) : null}
         </View>
 
-        <Text className={text.bodySm}>{footerMeta}</Text>
+        <Text style={[styles.bodySm, { color: colors.foreground }]}>{footerMeta}</Text>
 
-        <View className={`${layout.row} flex-wrap`}>
-          <Text className={text.bodySm}>From {gym.monthlyFeeLabel}</Text>
-        </View>
+        <Text style={[styles.bodySm, { color: colors.foreground }]}>
+          {`From ${gym.monthlyFeeLabel ?? '—'}`}
+        </Text>
 
-        <View className={`${layout.row} flex-wrap`}>
-          {visibleCategories.map((tag) => (
-            <View key={tag} className={`${badges.container} mr-2 mt-2`} style={{ backgroundColor: colors.chipInactive }}>
-              <Text className={text.meta}>{tag}</Text>
-            </View>
-          ))}
-        </View>
+        {visibleCategories.length > 0 ? (
+          <View style={styles.tagRow}>
+            {visibleCategories.map((tag) => (
+              <View
+                key={tag}
+                style={[styles.tag, { backgroundColor: colors.chipInactive }]}
+              >
+                <Text style={[styles.tagText, { color: colors.muted }]}>{tag}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
       </Pressable>
     </View>
   );
+});
+
+const styles = StyleSheet.create({
+  card: {
+    marginBottom: spacing[2],
+    borderRadius: 24,
+    borderWidth: 1,
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+  },
+  imageFrame: {
+    overflow: 'hidden',
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: spacing[3],
+  },
+  imagePlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  body: {
+    marginTop: spacing[1],
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing[3],
+    marginBottom: spacing[2],
+  },
+  title: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '600',
+    paddingRight: spacing[2],
+  },
+  caption: {
+    fontSize: 14,
+    marginBottom: spacing[2],
+  },
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: spacing[2],
+    marginBottom: spacing[2],
+  },
+  metaItem: {
+    marginRight: spacing[2],
+  },
+  bodySm: {
+    fontSize: 14,
+    marginBottom: spacing[2],
+  },
+  tagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing[2],
+    marginTop: spacing[1],
+  },
+  tag: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  tagText: {
+    fontSize: 14,
+  },
 });

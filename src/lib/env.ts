@@ -6,6 +6,9 @@ type RequiredEnv = {
 };
 
 type OptionalEnv = {
+  /** Phone-only: fake OTP + @app.local bridge. Email auth never reads this. */
+  EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH: string;
+  /** @deprecated Alias for EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH (phone only). */
   EXPO_PUBLIC_ENABLE_DEV_AUTH: string;
   EXPO_PUBLIC_ALLOW_PROD_DEV_AUTH: string;
   EXPO_PUBLIC_SUPABASE_STORAGE_BUCKET: string;
@@ -23,24 +26,73 @@ function readEnv(): RequiredEnv {
 
 export const env = readEnv();
 export const optionalEnv: OptionalEnv = {
+  EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH: process.env.EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH?.trim() ?? '',
   EXPO_PUBLIC_ENABLE_DEV_AUTH: process.env.EXPO_PUBLIC_ENABLE_DEV_AUTH?.trim() ?? '',
   EXPO_PUBLIC_ALLOW_PROD_DEV_AUTH: process.env.EXPO_PUBLIC_ALLOW_PROD_DEV_AUTH?.trim() ?? '',
   EXPO_PUBLIC_SUPABASE_STORAGE_BUCKET: process.env.EXPO_PUBLIC_SUPABASE_STORAGE_BUCKET?.trim() ?? '',
 };
 
-/** Dev phone bridge + fake SMS OTP. Never applies to email — email always uses Supabase. */
+function parseEnvBoolean(raw: string): boolean | null {
+  if (!raw) return null;
+  const normalized = raw.toLowerCase();
+  if (normalized === 'true' || normalized === '1' || normalized === 'yes') return true;
+  if (normalized === 'false' || normalized === '0' || normalized === 'no') return false;
+  return null;
+}
+
+/**
+ * Resolves phone-only dev auth flag.
+ * Priority: EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH → legacy EXPO_PUBLIC_ENABLE_DEV_AUTH → default (__DEV__ ? on : off).
+ */
+function resolveDevPhoneAuthExplicit(): boolean | null {
+  const phoneFlag = parseEnvBoolean(optionalEnv.EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH);
+  if (phoneFlag !== null) return phoneFlag;
+
+  const legacyFlag = parseEnvBoolean(optionalEnv.EXPO_PUBLIC_ENABLE_DEV_AUTH);
+  if (legacyFlag !== null) return legacyFlag;
+
+  return null;
+}
+
+/**
+ * Dev phone bridge + fake SMS OTP (123456). Never applies to email — email always uses Supabase OTP.
+ */
 export function isDevPhoneAuthEnabled(): boolean {
-  const enableDevAuth = optionalEnv.EXPO_PUBLIC_ENABLE_DEV_AUTH.toLowerCase() === 'true';
-  const allowProdDevAuth = optionalEnv.EXPO_PUBLIC_ALLOW_PROD_DEV_AUTH.toLowerCase() === 'true';
+  const explicit = resolveDevPhoneAuthExplicit();
+  const allowProdDevAuth = parseEnvBoolean(optionalEnv.EXPO_PUBLIC_ALLOW_PROD_DEV_AUTH) === true;
 
-  if (__DEV__) return enableDevAuth;
+  if (explicit !== null) {
+    if (!explicit) return false;
+    if (__DEV__) return true;
+    return allowProdDevAuth;
+  }
 
-  return enableDevAuth && allowProdDevAuth;
+  // Unset: dev client uses phone bridge; release/preview builds use real SMS unless ALLOW_PROD_DEV_AUTH
+  if (__DEV__) return true;
+  return allowProdDevAuth;
+}
+
+/** Email OTP always goes through Supabase — there is no dev email bypass. */
+export function isDevEmailAuthEnabled(): boolean {
+  return false;
 }
 
 /** @deprecated Use `isDevPhoneAuthEnabled` — email auth ignores dev mode. */
 export function isDevAuthEnabled(): boolean {
   return isDevPhoneAuthEnabled();
+}
+
+/** Debug summary for auth routing (phone dev vs prod SMS, email always Supabase). */
+export function getAuthEnvSummary(): {
+  phoneMode: 'dev_bridge' | 'supabase_sms';
+  emailMode: 'supabase_otp';
+  isDevClient: boolean;
+} {
+  return {
+    phoneMode: isDevPhoneAuthEnabled() ? 'dev_bridge' : 'supabase_sms',
+    emailMode: 'supabase_otp',
+    isDevClient: __DEV__,
+  };
 }
 
 export function assertRequiredEnv(): void {

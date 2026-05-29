@@ -5,6 +5,7 @@
  */
 import { useEffect } from 'react';
 
+import { getAuthEnvSummary } from '@/lib/env';
 import { getCurrentSession, onAuthStateChange } from '@/services/auth/auth.service';
 import { logger } from '@/lib/logger';
 import { useAuthStore } from '@/store/auth.store';
@@ -16,6 +17,10 @@ export function useAuthSession() {
 
   useEffect(() => {
     let cancelled = false;
+
+    if (__DEV__) {
+      logger.info('auth.env', getAuthEnvSummary());
+    }
 
     (async () => {
       const session = await getCurrentSession();

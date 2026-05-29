@@ -1,42 +1,36 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   Platform,
-  Pressable,
   RefreshControl,
+  StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 
-import { CategoryFilterRow } from '@/components/discovery/CategoryFilterRow';
-import { ChipToggleRow } from '@/components/discovery/ChipToggleRow';
 import { DiscoveryEmptyState } from '@/components/discovery/DiscoveryEmptyState';
-import { GymDiscoverCard } from '@/components/discovery/GymDiscoverCard';
+import { ExploreFeaturedGymCard } from '@/components/discovery/explore/ExploreFeaturedGymCard';
+import { ExploreFiltersBlock } from '@/components/discovery/explore/ExploreFiltersBlock';
+import { ExploreGymListRow } from '@/components/discovery/explore/ExploreGymListRow';
 import { GymDiscoverCardSkeleton } from '@/components/discovery/GymDiscoverCardSkeleton';
-import { SelectField } from '@/components/ui/SelectField';
-import { Card } from '@/components/ui/Card';
 import { Screen, useScreenScrollBottomPadding } from '@/components/ui/Screen';
-import { webScrollContainerStyle } from '@/lib/web-layout';
 import {
   DEFAULT_EXPLORE_SORT,
   EXPLORE_SEARCH_DEBOUNCE_MS,
-  EXPLORE_SORT_LABELS,
-  EXPLORE_SORT_VALUES,
   PRICE_PRESETS_INR_MONTHLY_MIN,
   RATING_FILTERS,
   parseExploreSortMode,
   type ExploreSortMode,
 } from '@/constants/gym-discovery';
+import type { GymCardPresentation } from '@/domain/discovery/types';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useExploreMarketplace } from '@/hooks/useExploreMarketplace';
-import { appendSearchHistoryTerm } from '@/services/discovery/preferences.storage';
-import { layout, surfaces, text } from '@/theme/classes';
-import { inputSurface } from '@/theme/styles';
 import { useTheme } from '@/hooks/useTheme';
-import type { GymCardPresentation } from '@/domain/discovery/types';
+import { webScrollContainerStyle } from '@/lib/web-layout';
+import { appendSearchHistoryTerm } from '@/services/discovery/preferences.storage';
+import { spacing } from '@/theme/spacing';
 
 function firstParam(raw: string | string[] | undefined): string | undefined {
   if (typeof raw === 'string') return raw.trim() || undefined;
@@ -50,6 +44,12 @@ type RouteParams = {
   category?: string | string[];
   price?: string | string[];
 };
+
+function pickFeaturedGym(cards: GymCardPresentation[]): GymCardPresentation | null {
+  if (!cards.length) return null;
+  const withImage = cards.find((gym) => (gym.imageUrls[0] ?? gym.imageUrl) != null);
+  return withImage ?? cards[0];
+}
 
 export function ExploreScreen() {
   const { colors } = useTheme();
@@ -87,7 +87,10 @@ export function ExploreScreen() {
     void appendSearchHistoryTerm(term);
   }, [debouncedSearch]);
 
-  const ratingMin = useMemo(() => RATING_FILTERS.find((tier) => tier.id === ratingPresetId)?.min ?? 0, [ratingPresetId]);
+  const ratingMin = useMemo(
+    () => RATING_FILTERS.find((tier) => tier.id === ratingPresetId)?.min ?? 0,
+    [ratingPresetId],
+  );
 
   const monthlyFeeMax = useMemo(() => {
     return PRICE_PRESETS_INR_MONTHLY_MIN.find((tier) => tier.id === pricePresetId)?.maxCents ?? null;
@@ -102,10 +105,17 @@ export function ExploreScreen() {
     sort,
   });
 
-  const sortOptions = useMemo(
-    () => EXPLORE_SORT_VALUES.map((value) => ({ value, label: EXPLORE_SORT_LABELS[value] })),
-    [],
+  const priceHintLabel = useMemo(
+    () => PRICE_PRESETS_INR_MONTHLY_MIN.find((tier) => tier.id === pricePresetId)?.label ?? null,
+    [pricePresetId],
   );
+
+  const featuredGym = useMemo(() => pickFeaturedGym(explore.cards), [explore.cards]);
+
+  const listGyms = useMemo(() => {
+    if (!featuredGym) return explore.cards;
+    return explore.cards.filter((gym) => gym.id !== featuredGym.id);
+  }, [explore.cards, featuredGym]);
 
   const toggleCategory = useCallback((slug: string) => {
     setCategories((existing) =>
@@ -122,88 +132,72 @@ export function ExploreScreen() {
     router.replace('/(tabs)/explore');
   }, []);
 
-  const renderItem = useCallback(
+  const openGym = useCallback((id: string) => {
+    router.push(`/gym/${id}`);
+  }, []);
+
+  const renderListItem = useCallback(
     ({ item }: { item: GymCardPresentation }) => (
-      <GymDiscoverCard gym={item} onPress={() => router.push(`/gym/${item.id}`)} />
+      <ExploreGymListRow
+        gym={item}
+        priceHint={pricePresetId !== 'any' ? priceHintLabel : null}
+        onPress={() => openGym(item.id)}
+      />
     ),
-    [],
+    [openGym, priceHintLabel, pricePresetId],
   );
 
-  const header = (
-    <View className={layout.screenTop}>
-      <Text className={text.screenTitle}>Explore gyms</Text>
-      <Text className={`${layout.stack} ${text.screenSubtitle}`}>
-        Deep marketplace search with layered filters, deterministic sorts, and scalable Supabase queries.
+  const listHeader = (
+    <View style={styles.header}>
+      <Text style={[styles.title, { color: colors.foreground }]}>Explore gyms</Text>
+      <Text style={[styles.subtitle, { color: colors.muted }]}>
+        Search with filters and performance metrics.
       </Text>
-      <Text className={`${layout.stackMd} ${text.caption}`}>{`${explore.totalMatched} gyms after local filters`}</Text>
+      <Text style={[styles.count, { color: colors.primary }]}>
+        {explore.totalMatched} GYMS NEARBY
+      </Text>
 
       {explore.distanceFallbackActive ? (
-        <View className={layout.stackMd}>
-          <Card>
-            <Text className={text.bodySm}>
-              Enable device location to unlock true nearest sorting. Right now we approximate with popularity.
-            </Text>
-          </Card>
+        <Text style={[styles.hint, { color: colors.muted }]}>
+          Enable location for nearest sorting.
+        </Text>
+      ) : null}
+
+      <ExploreFiltersBlock
+        search={search}
+        onSearchChange={setSearch}
+        sort={sort}
+        onSortChange={setSort}
+        categoryOptions={explore.categoryOptions}
+        categories={categories}
+        onToggleCategory={toggleCategory}
+        ratingPresetId={ratingPresetId}
+        onRatingSelect={setRatingPresetId}
+        pricePresetId={pricePresetId}
+        onPriceSelect={setPricePresetId}
+        onReset={clearFilters}
+      />
+
+      {explore.isInitialLoading && !explore.cards.length ? (
+        <View style={styles.loadingBlock}>
+          <GymDiscoverCardSkeleton />
+          <GymDiscoverCardSkeleton variant="rail" />
         </View>
       ) : null}
 
-      <Text className={`${layout.stack} ${text.label}`}>Search</Text>
-      <TextInput
-        placeholder="Search name, category, or keyword"
-        placeholderTextColor={colors.placeholder}
-        className={surfaces.input}
-        style={inputSurface(colors)}
-        value={search}
-        onChangeText={setSearch}
-        autoCapitalize="none"
-      />
-
-      <View className={layout.stackMd}>
-        <SelectField label="Sort gyms" options={sortOptions} value={sort} onChange={setSort} />
-      </View>
-
-      <Text className={`${layout.stackMd} ${text.label}`}>Categories</Text>
-      <CategoryFilterRow options={explore.categoryOptions} selected={categories} onToggle={toggleCategory} />
-
-      <Text className={`${layout.stackMd} ${text.label}`}>Minimum rating</Text>
-      <ChipToggleRow
-        options={RATING_FILTERS}
-        selectedId={ratingPresetId}
-        onSelect={(next) => setRatingPresetId(next === ratingPresetId ? 'any' : next)}
-      />
-
-      <Text className={`${layout.stackMd} ${text.label}`}>Monthly budget</Text>
-      <ChipToggleRow
-        options={PRICE_PRESETS_INR_MONTHLY_MIN}
-        selectedId={pricePresetId}
-        onSelect={(next) => setPricePresetId(next === pricePresetId ? 'any' : next)}
-      />
-
-      <Pressable onPress={clearFilters} accessibilityRole="button">
-        <Text className={`${layout.stackLg} ${text.link}`}>Reset filters</Text>
-      </Pressable>
+      {featuredGym && !explore.isInitialLoading ? (
+        <ExploreFeaturedGymCard gym={featuredGym} onPress={() => openGym(featuredGym.id)} />
+      ) : null}
     </View>
   );
-
-  if (explore.isInitialLoading && !explore.cards.length) {
-    return (
-      <Screen scroll>
-        {header}
-        <View>
-          <GymDiscoverCardSkeleton />
-          <GymDiscoverCardSkeleton />
-        </View>
-      </Screen>
-    );
-  }
 
   if (explore.error && !explore.cards.length) {
     return (
       <Screen scroll>
-        {header}
+        {listHeader}
         <DiscoveryEmptyState
           title="We could not load gyms"
-          subtitle="Validate Supabase migrations, RLS policies, and network connectivity."
+          subtitle="Check your connection and try again."
           actionLabel="Try again"
           onActionPress={() => explore.refetch()}
         />
@@ -216,15 +210,15 @@ export function ExploreScreen() {
   return (
     <Screen>
       <FlatList<GymCardPresentation>
-        data={explore.cards}
-        renderItem={renderItem}
+        data={listGyms}
+        renderItem={renderListItem}
         keyExtractor={(item) => item.id}
         nativeID={Platform.OS === 'web' ? 'exploreMarketplaceFlatListScroll' : undefined}
         style={listScrollStyle}
         showsVerticalScrollIndicator={false}
-        ListHeaderComponent={header}
+        ListHeaderComponent={listHeader}
         contentContainerStyle={{ paddingBottom: scrollBottomPadding }}
-        ItemSeparatorComponent={() => <View className={layout.section} />}
+        ItemSeparatorComponent={() => <View style={{ height: spacing[3] }} />}
         refreshControl={<RefreshControl refreshing={explore.isRefetching} onRefresh={explore.refetch} />}
         onEndReachedThreshold={0.45}
         onEndReached={() => explore.fetchNext()}
@@ -232,7 +226,7 @@ export function ExploreScreen() {
           explore.isInitialLoading ? null : (
             <DiscoveryEmptyState
               title="No gyms match"
-              subtitle="Adjust filters — especially categories or budget — then try again."
+              subtitle="Try adjusting filters or reset to see more results."
               actionLabel="Clear filters"
               onActionPress={clearFilters}
             />
@@ -240,7 +234,7 @@ export function ExploreScreen() {
         }
         ListFooterComponent={
           explore.fetchNextBusy ? (
-            <View className="py-10">
+            <View style={styles.footerLoader}>
               <ActivityIndicator accessibilityLabel="Loading more gyms" />
             </View>
           ) : null
@@ -250,3 +244,35 @@ export function ExploreScreen() {
   );
 }
 
+const styles = StyleSheet.create({
+  header: {
+    paddingTop: spacing[2],
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+  },
+  subtitle: {
+    fontSize: 14,
+    marginTop: spacing[1],
+    lineHeight: 20,
+  },
+  count: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginTop: spacing[3],
+    marginBottom: spacing[3],
+  },
+  hint: {
+    fontSize: 12,
+    marginBottom: spacing[2],
+  },
+  loadingBlock: {
+    gap: spacing[3],
+    marginBottom: spacing[2],
+  },
+  footerLoader: {
+    paddingVertical: spacing[6],
+  },
+});

@@ -106,7 +106,7 @@ useAuth / useSession / ProtectedRoute
 1. Email provider enabled; template shows `{{ .Token }}`
 2. Phone provider + SMS configured
 3. Custom SMTP recommended
-4. `EXPO_PUBLIC_ENABLE_DEV_AUTH=false` for real email OTP
+4. Email OTP is always real Supabase; phone dev uses `EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH` only
 
 ## Future OAuth
 

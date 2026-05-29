@@ -22,8 +22,13 @@ The app sends a **real 6-digit code** to whatever email the user enters. There i
 
 ## 2. App environment
 
+Phone and email auth are controlled **independently**:
+
 ```env
-EXPO_PUBLIC_ENABLE_DEV_AUTH=false
+# Phone: fake OTP 123456 in local Expo dev (optional in production)
+EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH=true
+
+# Email: always real Supabase OTP — no dev bypass env flag
 ```
 
 Restart Expo after changing `.env`:
@@ -32,7 +37,7 @@ Restart Expo after changing `.env`:
 npx expo start --clear
 ```
 
-`EXPO_PUBLIC_ENABLE_DEV_AUTH=true` only affects **phone** dev OTP (`123456`), not email.
+`EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH` (or legacy `EXPO_PUBLIC_ENABLE_DEV_AUTH`) affects **phone only**, never email.
 
 ## 3. Test flow
 

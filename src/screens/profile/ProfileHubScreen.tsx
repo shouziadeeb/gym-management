@@ -1,22 +1,27 @@
+/**
+ * @file ProfileHubScreen.tsx
+ * Profile tab: Silent Coach–style layout with GYM OS theme colors (tabs unchanged).
+ */
 import { router } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { View } from 'react-native';
+import { MapPin, Phone, User as UserIcon } from 'lucide-react-native';
 
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Screen } from '@/components/ui/Screen';
 import { AppOptionsMenu } from '@/components/layout/AppOptionsMenu';
+import { BecomeGymOwnerCard } from '@/components/profile/BecomeGymOwnerCard';
+import { ProfileAccountCard } from '@/components/profile/ProfileAccountCard';
+import { ProfileGuestCard } from '@/components/profile/ProfileGuestCard';
+import { ProfileHeroSection } from '@/components/profile/ProfileHeroSection';
+import { ProfileHubHeader } from '@/components/profile/ProfileHubHeader';
+import { Screen } from '@/components/ui/Screen';
 import { OwnerGymProfileCard } from '@/features/profile';
 import { isProfileComplete, resolveDisplayName, resolveProfileAddress } from '@/domain/profiles';
 import { useMyProfile } from '@/hooks/useMyProfile';
-import { useTheme } from '@/hooks/useTheme';
 import { useUserGyms } from '@/hooks/useUserGyms';
 import { useAppStore } from '@/store/app.store';
 import { useAuthStore } from '@/store/auth.store';
 import { useProfileMenuStore } from '@/store/profile-menu.store';
-import { layout, text } from '@/theme/classes';
 
 export function ProfileHubScreen() {
-  const { colors } = useTheme();
   const session = useAuthStore((state) => state.session);
   const setAppMode = useAppStore((state) => state.setAppMode);
   const activeOwnerGymId = useAppStore((state) => state.activeOwnerGymId);
@@ -32,77 +37,58 @@ export function ProfileHubScreen() {
   const profileComplete = isProfileComplete(profile);
   const profileAddress = resolveProfileAddress(profile);
   const activeGym = ownedGyms.find((gym) => gym.id === activeOwnerGymId) ?? ownedGyms[0] ?? null;
+  const avatarInitial =
+    profile?.full_name?.trim()?.charAt(0) ?? resolvedName.charAt(0) ?? session?.user.id?.charAt(0) ?? 'U';
 
-  const profileHeader = (
-    <View className={`${layout.screenTop} ${layout.rowBetween}`}>
-      <View className={layout.flex1}>
-        <Text className={text.screenTitle}>Profile</Text>
-        <Text className={`${layout.stack} ${text.screenSubtitle}`}>
-          {isAuthenticated
-            ? 'Manage your account and gym settings.'
-            : 'Sign in to unlock memberships, bookings, and owner tools.'}
-        </Text>
-      </View>
-      <Pressable
-        onPress={openMenu}
-        hitSlop={12}
-        style={{
-          flexShrink: 0,
-          minWidth: 44,
-          minHeight: 44,
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginTop: 4,
-        }}
-        accessibilityRole="button"
-        accessibilityLabel="Open app menu"
-      >
-        <Text style={{ color: colors.foreground, fontSize: 26, lineHeight: 28, fontWeight: '600' }}>⋮</Text>
-      </Pressable>
-    </View>
-  );
+  const accountRows = [
+    {
+      icon: Phone,
+      label: 'Phone',
+      value: resolvedPhone ?? 'Not available',
+    },
+    {
+      icon: UserIcon,
+      label: 'Gender',
+      value: profile?.gender ?? 'Not set',
+    },
+    {
+      icon: MapPin,
+      label: 'Address',
+      value: profileAddress ?? 'Not set',
+    },
+  ];
 
   return (
     <Screen scroll>
+      <ProfileHubHeader onOpenMenu={openMenu} />
+
       {!isAuthenticated ? (
         <>
-          {profileHeader}
-          <Card title="Account" className={layout.section}>
-            <Button title="Login" onPress={() => router.push('/auth/login')} />
-            <View className={layout.buttonSpacing} />
-            <Button title="Signup" variant="ghost" onPress={() => router.push('/auth/signup')} />
-          </Card>
+          <ProfileHeroSection
+            displayName="Guest"
+            avatarInitial="G"
+            profileComplete={false}
+          />
+          <ProfileGuestCard />
         </>
       ) : (
         <>
-          {profileHeader}
+          <ProfileHeroSection
+            displayName={resolvedName}
+            avatarInitial={avatarInitial}
+            profileComplete={profileComplete}
+          />
 
-          <Card title="My account" className={layout.section}>
-            <Text className={`mb-1 ${text.caption}`}>
-              Profile: {profileComplete ? 'Complete' : 'Incomplete'}
-            </Text>
-            <Text className={`mb-1 ${text.caption}`}>Phone: {resolvedPhone ?? 'Not available'}</Text>
-            <Text className={`mb-1 ${text.caption}`}>Name: {resolvedName}</Text>
-            <Text className={`mb-1 ${text.caption}`}>Gender: {profile?.gender ?? 'Not set'}</Text>
-            <Text className={`mb-1 ${text.caption}`}>Address: {profileAddress ?? 'Not set'}</Text>
-            <Text className={`mb-3 ${text.caption}`}>
-              Avatar:{' '}
-              {profile?.full_name?.trim() ? profile.full_name.trim().charAt(0).toUpperCase() : 'N/A'}
-            </Text>
-            {!profileComplete ? (
-              <Text className={`mb-3 ${text.warning}`}>
-                Complete profile setup to access protected features.
-              </Text>
-            ) : null}
-            {!profileComplete ? (
-              <Button
-                title="Complete profile setup"
-                onPress={() => router.push('/profile-setup?redirect=/(tabs)/profile-hub')}
-              />
-            ) : null}
-            <View className={layout.buttonSpacing} />
-            <Button title="My profile" variant="ghost" onPress={() => router.push('/profile')} />
-          </Card>
+          <ProfileAccountCard
+            rows={accountRows}
+            profileComplete={profileComplete}
+            onOpenMenu={openMenu}
+            onCompleteProfile={
+              !profileComplete
+                ? () => router.push('/profile-setup?redirect=/(tabs)/profile-hub')
+                : undefined
+            }
+          />
 
           <OwnerGymProfileCard
             ownedGyms={ownedGyms}
@@ -112,23 +98,17 @@ export function ProfileHubScreen() {
           />
 
           {ownedGyms.length === 0 && profileComplete ? (
-            <Card title="Become Gym Owner" highlighted>
-              <Text className={`mb-3 ${text.caption}`}>
-                If you own a gym or want to manage your fitness business, create your gym and access
-                owner tools.
-              </Text>
-              <Button
-                title="Create Gym"
-                onPress={() => {
-                  setAppMode('owner');
-                  router.push('/create-gym');
-                }}
-              />
-            </Card>
+            <BecomeGymOwnerCard
+              onCreateGym={() => {
+                setAppMode('owner');
+                router.push('/create-gym');
+              }}
+            />
           ) : null}
         </>
       )}
 
+      <View style={{ height: 8 }} />
       <AppOptionsMenu />
     </Screen>
   );

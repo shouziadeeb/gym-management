@@ -18,18 +18,15 @@ export type RouteAccessOptions = {
   unauthorizedFallback?: string;
 };
 
+export type RouteRedirect =
+  | { kind: 'login'; redirectPath: string; intent: AuthIntent }
+  | { kind: 'profile-setup'; redirectPath: string }
+  | { kind: 'href'; href: string };
+
 export type RouteAccessResult =
   | { status: 'loading' }
-  | { status: 'redirect'; href: string }
+  | { status: 'redirect'; redirect: RouteRedirect }
   | { status: 'ready' };
-
-function buildLoginHref(redirectPath: string, intent: AuthIntent): string {
-  return `/auth/login?redirect=${encodeURIComponent(redirectPath)}&intent=${intent}`;
-}
-
-function buildProfileSetupHref(redirectPath: string): string {
-  return `/profile-setup?redirect=${encodeURIComponent(redirectPath)}`;
-}
 
 export function useRouteAccess(options: RouteAccessOptions): RouteAccessResult {
   const {
@@ -52,7 +49,10 @@ export function useRouteAccess(options: RouteAccessOptions): RouteAccessResult {
     }
 
     if (!session) {
-      return { status: 'redirect' as const, href: buildLoginHref(redirectPath, authIntent) };
+      return {
+        status: 'redirect' as const,
+        redirect: { kind: 'login' as const, redirectPath, intent: authIntent },
+      };
     }
 
     const isLoading = profileGuard.isLoading || (requireOwner && ownerGuard.isLoading);
@@ -61,11 +61,17 @@ export function useRouteAccess(options: RouteAccessOptions): RouteAccessResult {
     }
 
     if (requireProfile && !profileGuard.isProfileComplete) {
-      return { status: 'redirect' as const, href: buildProfileSetupHref(redirectPath) };
+      return {
+        status: 'redirect' as const,
+        redirect: { kind: 'profile-setup' as const, redirectPath },
+      };
     }
 
     if (requireOwner && !ownerGuard.isOwner) {
-      return { status: 'redirect' as const, href: unauthorizedFallback };
+      return {
+        status: 'redirect' as const,
+        redirect: { kind: 'href' as const, href: unauthorizedFallback },
+      };
     }
 
     return { status: 'ready' as const };

@@ -61,7 +61,7 @@ export const surfaces = {
   modalOverlay: 'flex-1 items-center justify-center px-4',
   modalPanel: 'w-full max-w-sm rounded-2xl p-4',
   loadingScreen: 'flex-1 items-center justify-center bg-slate-50 dark:bg-slate-950',
-  chip: 'rounded-xl px-3 py-2',
+  chip: 'rounded-md px-3 py-2',
   chipActiveText: 'font-semibold text-white',
   chipInactiveText: 'font-semibold text-slate-900 dark:text-slate-100',
   input: 'rounded-xl border px-4 py-3.5 text-base',
@@ -69,14 +69,21 @@ export const surfaces = {
 } as const;
 
 export const buttons = {
-  base: 'rounded-xl px-4 py-3.5 items-center justify-center',
+  base: 'rounded-md px-4 py-3.5 items-center justify-center',
   disabled: 'opacity-50',
 } as const;
 
+/** Badge layout — use *Bg on View and *Text on Text (never text-* on View; breaks on native). */
 export const badges = {
-  expired: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200',
-  expiring: 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-100',
-  cancelled: 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-200',
-  active: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
   container: 'self-start rounded-full px-3 py-1',
+  expiredBg: 'bg-red-100 dark:bg-red-950',
+  expiredText: 'text-red-800 dark:text-red-200',
+  expiringBg: 'bg-amber-100 dark:bg-amber-950',
+  expiringText: 'text-amber-900 dark:text-amber-100',
+  cancelledBg: 'bg-slate-200 dark:bg-slate-800',
+  cancelledText: 'text-slate-800 dark:text-slate-200',
+  activeBg: 'bg-emerald-100 dark:bg-emerald-950',
+  activeText: 'text-emerald-800 dark:text-emerald-200',
+  neutralBg: 'bg-slate-100 dark:bg-slate-800',
+  neutralText: 'text-slate-700 dark:text-slate-200',
 } as const;

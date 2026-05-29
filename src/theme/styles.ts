@@ -1,5 +1,19 @@
-import type { ThemeColors } from '@/theme/colors';
+import { palette, type ThemeColors } from '@/theme/colors';
 import type { TextStyle, ViewStyle } from 'react-native';
+
+/** Light, neutral skeleton blocks (works on light and dark backgrounds). */
+export function skeletonBlockColors(isDark: boolean): { base: string; subtle: string } {
+  if (isDark) {
+    return {
+      base: 'rgba(255, 255, 255, 0.08)',
+      subtle: 'rgba(255, 255, 255, 0.05)',
+    };
+  }
+  return {
+    base: palette.slate200,
+    subtle: palette.slate100,
+  };
+}
 
 /** Programmatic styles for React Native — CSS variables do not resolve on native. */
 export function cardSurface(colors: ThemeColors, elevated = false): ViewStyle {
