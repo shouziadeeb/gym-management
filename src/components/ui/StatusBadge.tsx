@@ -13,7 +13,7 @@ type StatusBadgeProps = {
 function toneColors(colors: ThemeColors, tone: StatusTone): { bg: string; fg: string } {
   switch (tone) {
     case 'active':
-      return { bg: colors.successMuted, fg: colors.successForeground };
+      return { bg: colors.success, fg: colors.primaryForeground };
     case 'expiring':
       return { bg: colors.warningMuted, fg: colors.warningForeground };
     case 'expired':
