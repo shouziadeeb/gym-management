@@ -1,16 +1,74 @@
+/**
+ * @file profiles.api.ts
+ * Profile CRUD and auth-field sync (email, phone, provider) after hybrid OTP sign-in.
+ */
 import type { User } from '@supabase/supabase-js';
+import type { ProfileAuthSyncInput } from '@/services/auth/auth.types';
 import type { Profile } from '@/types/models';
 
 import { buildDefaultDisplayName } from '@/domain/profiles';
 import { supabase } from '@/lib/supabase';
+import {
+  detectAuthMethodFromUser,
+  detectAuthProviderFromUser,
+  isSyntheticBridgeEmail,
+  phoneDigitsFromBridgeEmail,
+  resolveRealEmail,
+} from '@/services/auth/auth.utils';
 
+/** Resolves E.164 phone from user metadata, bridge email, or legacy @app.local pseudo-email. */
 function resolveAuthPhone(user: User, fallbackPhone?: string | null): string | null {
   const metadataPhone = typeof user.user_metadata?.phone === 'string' ? user.user_metadata.phone : null;
-  const emailPhone =
+  const bridgeDigits = user.email ? phoneDigitsFromBridgeEmail(user.email) : null;
+  const legacyEmailPhone =
     typeof user.email === 'string' && user.email.endsWith('@app.local') ? user.email.split('@')[0] : null;
-  const rawPhone = fallbackPhone ?? user.phone ?? metadataPhone ?? (emailPhone ? `+${emailPhone}` : null);
+  const rawPhone =
+    fallbackPhone ??
+    user.phone ??
+    metadataPhone ??
+    (bridgeDigits ? `+${bridgeDigits.length === 10 ? '91' + bridgeDigits : bridgeDigits}` : null) ??
+    (legacyEmailPhone ? `+${legacyEmailPhone}` : null);
   const normalized = rawPhone?.trim() ?? '';
   return normalized.length > 0 ? normalized : null;
+}
+
+/** Maps Supabase user to profile auth columns (method, provider, verified flags). */
+export function buildProfileAuthSync(user: User, fallbackPhone?: string | null): ProfileAuthSyncInput {
+  const phone = resolveAuthPhone(user, fallbackPhone);
+  const email = resolveRealEmail(user);
+  const auth_type = detectAuthMethodFromUser(user);
+  const auth_provider = detectAuthProviderFromUser(user);
+
+  return {
+    auth_provider,
+    auth_type,
+    email,
+    phone,
+    email_verified: Boolean(user.email_confirmed_at) || Boolean(email && !isSyntheticBridgeEmail(user.email)),
+    phone_verified: Boolean(user.phone_confirmed_at) || Boolean(phone),
+    provider_metadata: {
+      ...(typeof user.user_metadata === 'object' && user.user_metadata ? user.user_metadata : {}),
+      last_synced_at: new Date().toISOString(),
+    },
+  };
+}
+
+/** Writes auth_provider, auth_type, verified flags, and metadata onto the profiles row. */
+async function syncProfileAuthFields(user: User, fallbackPhone?: string | null): Promise<void> {
+  const authSync = buildProfileAuthSync(user, fallbackPhone);
+  const patch: Record<string, unknown> = {
+    auth_provider: authSync.auth_provider,
+    auth_type: authSync.auth_type,
+    email_verified: authSync.email_verified,
+    phone_verified: authSync.phone_verified,
+    provider_metadata: authSync.provider_metadata,
+  };
+
+  if (authSync.email) patch.email = authSync.email;
+  if (authSync.phone) patch.phone = authSync.phone;
+
+  const { error } = await supabase.from('profiles').update(patch).eq('id', user.id);
+  if (error) throw error;
 }
 
 /**
@@ -20,27 +78,31 @@ function resolveAuthPhone(user: User, fallbackPhone?: string | null): string | n
 export async function ensureProfileForUser(user: User): Promise<void> {
   const { data: existing, error: selectError } = await supabase
     .from('profiles')
-    .select('id, phone, full_name')
+    .select('id, phone, full_name, email, auth_type')
     .eq('id', user.id)
     .maybeSingle();
 
   if (selectError) throw selectError;
 
   const phone = resolveAuthPhone(user);
+  const authSync = buildProfileAuthSync(user);
   const fullNameFromMetadata =
     typeof user.user_metadata?.full_name === 'string' ? user.user_metadata.full_name.trim() : '';
   const generatedName = buildDefaultDisplayName(phone, user.id);
   const fullName = fullNameFromMetadata || generatedName;
 
   if (existing) {
-    const patch: { phone?: string; full_name?: string } = {};
+    const patch: Record<string, unknown> = {};
     if (!existing.phone?.trim() && phone) patch.phone = phone;
     if (!existing.full_name?.trim()) patch.full_name = fullName;
+    if (!existing.email?.trim() && authSync.email) patch.email = authSync.email;
 
     if (Object.keys(patch).length > 0) {
       const { error: updateError } = await supabase.from('profiles').update(patch).eq('id', user.id);
       if (updateError) throw updateError;
     }
+
+    await syncProfileAuthFields(user, phone);
     return;
   }
 
@@ -48,11 +110,16 @@ export async function ensureProfileForUser(user: User): Promise<void> {
     id: user.id,
     phone,
     full_name: fullName,
+    email: authSync.email,
     role: 'member',
+    auth_provider: authSync.auth_provider,
+    auth_type: authSync.auth_type,
+    email_verified: authSync.email_verified,
+    phone_verified: authSync.phone_verified,
+    provider_metadata: authSync.provider_metadata,
   });
 
   if (insertError) {
-    // Race: another request or trigger created the row
     if (insertError.code === '23505') return;
     throw insertError;
   }
@@ -61,27 +128,31 @@ export async function ensureProfileForUser(user: User): Promise<void> {
 export async function ensureProfileForUserWithPhone(user: User, fallbackPhone?: string | null): Promise<void> {
   const { data: existing, error: selectError } = await supabase
     .from('profiles')
-    .select('id, phone, full_name')
+    .select('id, phone, full_name, email, auth_type')
     .eq('id', user.id)
     .maybeSingle();
 
   if (selectError) throw selectError;
 
   const phone = resolveAuthPhone(user, fallbackPhone);
+  const authSync = buildProfileAuthSync(user, fallbackPhone);
   const fullNameFromMetadata =
     typeof user.user_metadata?.full_name === 'string' ? user.user_metadata.full_name.trim() : '';
   const generatedName = buildDefaultDisplayName(phone, user.id);
   const fullName = fullNameFromMetadata || generatedName;
 
   if (existing) {
-    const patch: { phone?: string; full_name?: string } = {};
+    const patch: Record<string, unknown> = {};
     if (!existing.phone?.trim() && phone) patch.phone = phone;
     if (!existing.full_name?.trim()) patch.full_name = fullName;
+    if (!existing.email?.trim() && authSync.email) patch.email = authSync.email;
 
     if (Object.keys(patch).length > 0) {
       const { error: updateError } = await supabase.from('profiles').update(patch).eq('id', user.id);
       if (updateError) throw updateError;
     }
+
+    await syncProfileAuthFields(user, phone);
     return;
   }
 
@@ -89,7 +160,13 @@ export async function ensureProfileForUserWithPhone(user: User, fallbackPhone?: 
     id: user.id,
     phone,
     full_name: fullName,
+    email: authSync.email,
     role: 'member',
+    auth_provider: authSync.auth_provider,
+    auth_type: authSync.auth_type,
+    email_verified: authSync.email_verified,
+    phone_verified: authSync.phone_verified,
+    provider_metadata: authSync.provider_metadata,
   });
 
   if (insertError) {
@@ -129,11 +206,14 @@ export async function updateMyProfile(userId: string, payload: UpdateMyProfileIn
   if (updateError) throw updateError;
   if (updated) return updated as Profile;
 
-  // `.single()` fails with “Cannot coerce…” when UPDATE matches 0 rows. That happens when
-  // auth.users exists but profiles was never inserted (skipped trigger / legacy signup).
   const insertRow = {
     id: userId,
     role: 'member' as const,
+    auth_provider: 'phone' as const,
+    auth_type: 'phone' as const,
+    email_verified: false,
+    phone_verified: false,
+    provider_metadata: {},
     ...payload,
     home_latitude: payload.home_latitude ?? null,
     home_longitude: payload.home_longitude ?? null,
@@ -144,7 +224,6 @@ export async function updateMyProfile(userId: string, payload: UpdateMyProfileIn
 
   if (!insertError && inserted) return inserted as Profile;
 
-  // Concurrent insert raced with us — row exists now; apply update once.
   if (insertError?.code === '23505') {
     const { data: retry, error: retryError } = await supabase
       .from('profiles')

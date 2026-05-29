@@ -1,6 +1,7 @@
-import { LoginScreen } from '@/screens/auth/LoginScreen';
+/** Expo route: /auth/login — renders hybrid OTP login screen. */
+import { HybridAuthScreen } from '@/screens/auth/HybridAuthScreen';
 
 export default function LoginRoute() {
-  return <LoginScreen mode="login" />;
+  return <HybridAuthScreen mode="login" />;
 }
 

@@ -28,15 +28,19 @@ export const optionalEnv: OptionalEnv = {
   EXPO_PUBLIC_SUPABASE_STORAGE_BUCKET: process.env.EXPO_PUBLIC_SUPABASE_STORAGE_BUCKET?.trim() ?? '',
 };
 
-export function isDevAuthEnabled(): boolean {
+/** Dev phone bridge + fake SMS OTP. Never applies to email — email always uses Supabase. */
+export function isDevPhoneAuthEnabled(): boolean {
   const enableDevAuth = optionalEnv.EXPO_PUBLIC_ENABLE_DEV_AUTH.toLowerCase() === 'true';
   const allowProdDevAuth = optionalEnv.EXPO_PUBLIC_ALLOW_PROD_DEV_AUTH.toLowerCase() === 'true';
 
-  // Local dev: only EXPO_PUBLIC_ENABLE_DEV_AUTH=true is needed.
   if (__DEV__) return enableDevAuth;
 
-  // Hosted/prod-like builds: require an explicit second flag to avoid accidental enablement.
   return enableDevAuth && allowProdDevAuth;
+}
+
+/** @deprecated Use `isDevPhoneAuthEnabled` — email auth ignores dev mode. */
+export function isDevAuthEnabled(): boolean {
+  return isDevPhoneAuthEnabled();
 }
 
 export function assertRequiredEnv(): void {

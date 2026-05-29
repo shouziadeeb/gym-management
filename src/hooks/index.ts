@@ -1,4 +1,11 @@
+export { useAuth } from '@/hooks/useAuth';
 export { useAuthSession } from '@/hooks/useAuthSession';
+export { useEmailAuth } from '@/hooks/useEmailAuth';
+export { useHybridAuth } from '@/hooks/useHybridAuth';
+export { useOTP } from '@/hooks/useOTP';
+export { usePhoneAuth } from '@/hooks/usePhoneAuth';
+export { useRole } from '@/hooks/useRole';
+export { useSession } from '@/hooks/useSession';
 export { useDebouncedValue } from '@/hooks/useDebouncedValue';
 export { useDiscoveryCoordinates } from '@/hooks/useDiscoveryCoordinates';
 export { useDiscoverySignals } from '@/hooks/useDiscoverySignals';

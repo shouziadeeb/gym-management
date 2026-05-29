@@ -1,18 +1,23 @@
+/**
+ * @file dev-otp.ts
+ * Development-only phone auth: fake OTP (123456) and pseudo-email password bridge
+ * when EXPO_PUBLIC_ENABLE_DEV_AUTH is enabled. Not used for production email OTP.
+ */
 import type { Session } from '@supabase/supabase-js';
 
 import { ensureProfileForUserWithPhone } from '@/api/profiles.api';
 import { logger } from '@/lib/logger';
 import { supabase } from '@/lib/supabase';
+import { DEV_OTP_VALUE } from '@/services/auth/auth.constants';
+import {
+  bridgeEmailForPhone,
+  bridgeLoginCandidates,
+  bridgePasswordForPhone,
+  isLoginMissingError,
+  isSignupDuplicateError,
+  isSignupRateLimitError,
+} from '@/services/auth/auth.utils';
 import { sanitizeIndianPhoneInput } from '@/utils/phone';
-
-const DEV_OTP_VALUE = '123456';
-const BRIDGE_DOMAIN = 'gymos.app';
-const LEGACY_BRIDGE_DOMAINS = ['app.local'];
-const BRIDGE_PASSWORD_PREFIX = 'bridge_pwd_v1_';
-const SIGNUP_EXISTS_CODES = ['user_already_exists', 'email_exists', 'already_exists'];
-const SIGNUP_EXISTS_MESSAGES = ['already registered', 'already exists', 'already been registered'];
-const SIGNUP_RATE_LIMIT_CODES = ['over_email_send_rate_limit'];
-const LOGIN_NOT_FOUND_MESSAGES = ['invalid login credentials', 'user not found'];
 
 export function getDevOtpForPhone(_phoneDigits: string): string {
   return DEV_OTP_VALUE;
@@ -32,40 +37,6 @@ export async function verifyDevOtp(phoneDigits: string, token: string): Promise<
 }
 
 type AuthMode = 'signup' | 'login';
-
-function bridgeEmailForPhone(phoneDigits: string): string {
-  return `${phoneDigits}@${BRIDGE_DOMAIN}`;
-}
-
-function bridgeEmailForPhoneWithDomain(phoneDigits: string, domain: string): string {
-  return `${phoneDigits}@${domain}`;
-}
-
-function bridgeLoginCandidates(phoneDigits: string): string[] {
-  const candidates = [bridgeEmailForPhone(phoneDigits), ...LEGACY_BRIDGE_DOMAINS.map((domain) => bridgeEmailForPhoneWithDomain(phoneDigits, domain))];
-  return [...new Set(candidates)];
-}
-
-function bridgePasswordForPhone(phoneDigits: string): string {
-  return `${BRIDGE_PASSWORD_PREFIX}${phoneDigits}`;
-}
-
-function isSignupDuplicateError(error: { code?: string | null; message?: string | null }): boolean {
-  const code = (error.code ?? '').toLowerCase();
-  const message = (error.message ?? '').toLowerCase();
-  return SIGNUP_EXISTS_CODES.includes(code) || SIGNUP_EXISTS_MESSAGES.some((needle) => message.includes(needle));
-}
-
-function isSignupRateLimitError(error: { code?: string | null; message?: string | null }): boolean {
-  const code = (error.code ?? '').toLowerCase();
-  const message = (error.message ?? '').toLowerCase();
-  return SIGNUP_RATE_LIMIT_CODES.includes(code) || message.includes('rate limit');
-}
-
-function isLoginMissingError(error: { message?: string | null }): boolean {
-  const message = (error.message ?? '').toLowerCase();
-  return LOGIN_NOT_FOUND_MESSAGES.some((needle) => message.includes(needle));
-}
 
 async function signInBridgeUser(email: string, password: string): Promise<Session> {
   const signIn = await supabase.auth.signInWithPassword({ email, password });
@@ -94,6 +65,7 @@ async function signInBridgeUser(email: string, password: string): Promise<Sessio
   return signIn.data.session;
 }
 
+/** Probes sign-in to see if a bridge account exists; signs out immediately after probe. */
 async function hasExistingBridgeAccount(email: string, password: string): Promise<boolean> {
   const signIn = await supabase.auth.signInWithPassword({ email, password });
   if (signIn.error) {
@@ -130,6 +102,10 @@ async function signUpBridgeUser(email: string, password: string, phoneE164: stri
   }
 }
 
+/**
+ * Dev phone login/signup via pseudo email + password.
+ * Signup rejects duplicates; login tries legacy domains without auto-creating users.
+ */
 export async function signInDevEmailBridge(phoneRaw: string, mode: AuthMode): Promise<Session> {
   const phoneDigits = sanitizeIndianPhoneInput(phoneRaw);
   if (!phoneDigits) throw new Error('Phone number is required');

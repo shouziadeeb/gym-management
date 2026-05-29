@@ -10,9 +10,10 @@ type Props = {
   onChangeText: (v: string) => void;
   onBlur?: () => void;
   placeholder?: string;
-  keyboardType?: 'default' | 'phone-pad' | 'number-pad';
+  keyboardType?: 'default' | 'phone-pad' | 'number-pad' | 'email-address';
+  autoComplete?: 'email' | 'password' | 'off';
   secureTextEntry?: boolean;
-  autoCapitalize?: 'none' | 'sentences';
+  autoCapitalize?: 'none' | 'sentences' | 'words';
 };
 
 export function Input({
@@ -24,6 +25,7 @@ export function Input({
   keyboardType = 'default',
   secureTextEntry,
   autoCapitalize = 'none',
+  autoComplete,
 }: Props) {
   const { colors } = useTheme();
 
@@ -43,6 +45,7 @@ export function Input({
         keyboardType={keyboardType}
         secureTextEntry={secureTextEntry}
         autoCapitalize={autoCapitalize}
+        autoComplete={autoComplete}
       />
     </View>
   );

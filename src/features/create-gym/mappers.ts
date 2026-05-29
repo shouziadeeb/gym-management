@@ -3,6 +3,7 @@ import type { User } from '@supabase/supabase-js';
 import type { CreateGymInput } from '@/api/gyms.api';
 import type { CreateGymFormValues } from '@/features/create-gym/schema';
 import type { Profile } from '@/types/models';
+import { isSyntheticBridgeEmail } from '@/services/auth/auth.utils';
 
 const OWNER_PHONE_PATTERN = /^\+?[1-9]\d{9,14}$/;
 
@@ -24,8 +25,7 @@ export function resolveGymOwnerFromAccount(
   const phone = profile?.phone?.trim() || user.phone?.trim() || '';
   const name = profile?.full_name?.trim() || '';
   const rawEmail = typeof user.email === 'string' ? user.email.trim() : '';
-  const email =
-    rawEmail.includes('@') && !rawEmail.endsWith('@app.local') ? rawEmail : null;
+  const email = rawEmail.includes('@') && !isSyntheticBridgeEmail(rawEmail) ? rawEmail : null;
 
   return { name, phone, email };
 }

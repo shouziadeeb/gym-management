@@ -1,5 +1,13 @@
 export type UserRole = 'owner' | 'member' | 'trainer' | 'staff' | 'admin';
 export type AccountType = 'normal_user' | 'gym_owner';
+export type AuthMethod = 'phone' | 'email' | 'oauth';
+export type AuthProvider =
+  | 'phone'
+  | 'phone_email_bridge'
+  | 'email'
+  | 'google'
+  | 'apple'
+  | 'whatsapp';
 
 export type MembershipStatus = 'active' | 'expiring_soon' | 'expired' | 'cancelled';
 export type MembershipPlanType = 'monthly' | 'quarterly' | 'half_yearly' | 'yearly';
@@ -8,6 +16,12 @@ export type MembershipPaymentStatus = 'paid' | 'pending' | 'failed' | 'waived';
 export type Profile = {
   id: string;
   phone: string | null;
+  email: string | null;
+  auth_provider: AuthProvider;
+  auth_type: AuthMethod;
+  email_verified: boolean;
+  phone_verified: boolean;
+  provider_metadata: Record<string, unknown>;
   full_name: string | null;
   gender: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null;
   age: number | null;
