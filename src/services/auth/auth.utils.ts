@@ -4,6 +4,7 @@
  */
 import type { User } from '@supabase/supabase-js';
 
+import { buildLocalhostRedirectError } from '@/lib/oauth-redirect';
 import {
   LEGACY_PHONE_BRIDGE_DOMAINS,
   LOGIN_NOT_FOUND_MESSAGES,
@@ -72,14 +73,21 @@ export function detectAuthMethodFromUser(user: Pick<User, 'email' | 'phone'>): A
   return 'phone';
 }
 
+function hasOAuthIdentity(user: Pick<User, 'identities'>, provider: string): boolean {
+  return user.identities?.some((identity) => identity.provider === provider) ?? false;
+}
+
 /** Infers auth_provider from Supabase user metadata and email/phone fields. */
 export function detectAuthProviderFromUser(
-  user: Pick<User, 'email' | 'phone' | 'app_metadata' | 'user_metadata'>,
+  user: Pick<User, 'email' | 'phone' | 'app_metadata' | 'user_metadata' | 'identities'>,
 ): AuthProvider {
   const metadataProvider = user.user_metadata?.auth_provider;
   if (typeof metadataProvider === 'string' && metadataProvider.length > 0) {
     return metadataProvider as AuthProvider;
   }
+
+  if (hasOAuthIdentity(user, 'google')) return 'google';
+  if (hasOAuthIdentity(user, 'apple')) return 'apple';
 
   if (isSyntheticBridgeEmail(user.email)) return 'phone_email_bridge';
   if (user.phone?.trim()) return 'phone';
@@ -149,4 +157,31 @@ export function mapAuthErrorMessage(error: unknown, method: AuthMethod): string 
   }
 
   return fallback;
+}
+
+/** Converts Google OAuth errors into short, user-friendly messages. */
+export function mapOAuthErrorMessage(error: unknown): string {
+  const fallback = error instanceof Error ? error.message : String(error ?? 'Something went wrong');
+  const message = fallback.toLowerCase();
+
+  if (message.includes('cancel')) {
+    return 'Google sign-in was cancelled.';
+  }
+  if (message.includes('network') || message.includes('fetch')) {
+    return 'Network error. Check your connection and try again.';
+  }
+  if (isSignupDuplicateError({ message })) {
+    return 'This Google account is already registered. Try logging in instead.';
+  }
+  if (message.includes('access_denied') || message.includes('permission')) {
+    return 'Google sign-in was denied. Please allow access and try again.';
+  }
+  if (message.includes('localhost') || message.includes('redirected to localhost')) {
+    return buildLocalhostRedirectError();
+  }
+  if (message.includes('authorization code') || message.includes('callback data')) {
+    return 'Google sign-in could not finish. Ensure https://gym-management-green.vercel.app/** is in Supabase Redirect URLs and deploy the latest app to Vercel.';
+  }
+
+  return fallback.length > 120 ? 'Google sign-in failed. Please try again.' : fallback;
 }

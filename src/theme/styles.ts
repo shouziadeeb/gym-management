@@ -56,6 +56,15 @@ export function buttonLabelColor(colors: ThemeColors, variant: 'primary' | 'ghos
   return colors.primaryForeground;
 }
 
+/** Neutral outlined surface for third-party OAuth buttons (Google). */
+export function googleButtonSurface(colors: ThemeColors, isDark: boolean): ViewStyle {
+  return {
+    backgroundColor: isDark ? colors.card : palette.white,
+    borderColor: colors.border,
+    borderWidth: 1,
+  };
+}
+
 export function chipSurface(colors: ThemeColors, active: boolean): ViewStyle {
   return {
     backgroundColor: active ? colors.primary : colors.chipInactive,

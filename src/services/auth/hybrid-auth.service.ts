@@ -13,6 +13,7 @@ import {
   requestPasswordReset,
   resendSignupConfirmation,
 } from '@/services/auth/providers/email.provider';
+import { signInWithGoogle } from '@/services/auth/providers/oauth.provider';
 import { sendPhoneOtp, verifyPhoneOtp } from '@/services/auth/providers/phone.provider';
 
 /** Unified facade for phone + email authentication flows. */
@@ -25,6 +26,7 @@ export const hybridAuth = {
   signInWithEmailPassword,
   requestPasswordReset,
   resendSignupConfirmation,
+  signInWithGoogle,
 };
 
 export type { AuthMethod, AuthScreenMode };

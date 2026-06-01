@@ -64,7 +64,8 @@
           "recordAudioAndroid": false
         }
       ],
-      "expo-router"
+      "expo-router",
+      "expo-web-browser"
     ],
     "extra": {
       "router": {},

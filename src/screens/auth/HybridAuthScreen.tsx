@@ -15,6 +15,7 @@ import { OnboardingFormPanel } from '@/components/onboarding/OnboardingFormPanel
 import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen';
 import { APP_NAME } from '@/constants/app';
 import { useEmailAuth } from '@/hooks/useEmailAuth';
+import { useGoogleAuth } from '@/hooks/useGoogleAuth';
 import { useHybridAuth } from '@/hooks/useHybridAuth';
 import { usePhoneAuth } from '@/hooks/usePhoneAuth';
 import { isDevPhoneAuthEnabled } from '@/lib/env';
@@ -51,6 +52,7 @@ export function HybridAuthScreen({ mode = 'login' }: HybridAuthScreenProps) {
   const hybrid = useHybridAuth({ mode });
   const phoneAuth = usePhoneAuth(mode);
   const emailAuth = useEmailAuth(mode);
+  const googleAuth = useGoogleAuth(mode);
 
   const [otpValue, setOtpValue] = useState('');
 
@@ -62,6 +64,20 @@ export function HybridAuthScreen({ mode = 'login' }: HybridAuthScreenProps) {
   const useDevFakePhoneOtp = isDevPhoneAuthEnabled();
   const activeAuth = hybrid.method === 'email' ? emailAuth : phoneAuth;
   const isOtpStep = hybrid.step === 'otp';
+
+  /** Starts Google OAuth and navigates on success (native); web redirects to callback route. */
+  const handleGoogleSignIn = useCallback(async () => {
+    try {
+      const session = await googleAuth.signInWithGoogle({
+        redirect: typeof redirect === 'string' ? redirect : undefined,
+      });
+      if (session) {
+        postAuthNavigate(mode, typeof redirect === 'string' ? redirect : undefined);
+      }
+    } catch {
+      // message set on hook
+    }
+  }, [googleAuth, mode, redirect]);
 
   /** Sends phone OTP, clears prior digits, advances UI to OTP step. */
   const handlePhoneSend = useCallback(
@@ -161,7 +177,14 @@ export function HybridAuthScreen({ mode = 'login' }: HybridAuthScreenProps) {
         <Text className={`${layout.stack} ${text.screenSubtitle}`}>{subtitle}</Text>
 
         <View className={layout.sectionXl}>
-          {hybrid.step === 'method' ? <AuthMethodPicker onSelect={hybrid.selectMethod} /> : null}
+          {hybrid.step === 'method' ? (
+            <AuthMethodPicker
+              mode={mode}
+              onSelect={hybrid.selectMethod}
+              onGooglePress={handleGoogleSignIn}
+              googleLoading={googleAuth.loading}
+            />
+          ) : null}
 
           {hybrid.method === 'phone' && hybrid.step === 'phone' ? (
             <PhoneAuthForm
@@ -243,11 +266,18 @@ export function HybridAuthScreen({ mode = 'login' }: HybridAuthScreenProps) {
 
         <AuthStatusMessage
           message={
-            isOtpStep && devHint
-              ? null
-              : activeAuth.message && hybrid.step !== 'method'
-                ? activeAuth.message
-                : null
+            hybrid.step === 'method'
+              ? googleAuth.message
+              : isOtpStep && devHint
+                ? null
+                : activeAuth.message
+          }
+          tone={
+            hybrid.step === 'method' && googleAuth.message?.includes('Finish Google')
+              ? 'info'
+              : hybrid.step === 'method' && googleAuth.message
+                ? 'error'
+                : 'info'
           }
         />
       </OnboardingFormPanel>
