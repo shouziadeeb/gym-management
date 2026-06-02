@@ -5,7 +5,8 @@
 import { useCallback, useState } from 'react';
 import { Platform } from 'react-native';
 
-import { isRunningInExpoGo } from '@/lib/oauth-redirect';import { mapOAuthErrorMessage } from '@/services/auth/auth.utils';
+import { isRunningInExpoGo } from '@/lib/oauth-redirect';
+import { mapOAuthErrorMessage } from '@/services/auth/auth.utils';
 import type { AuthScreenMode } from '@/services/auth/auth.types';
 import { signInWithGoogle } from '@/services/auth/providers/oauth.provider';
 
@@ -29,7 +30,7 @@ export function useGoogleAuth(mode: AuthScreenMode = 'login') {
         });
 
         if (!session && isRunningInExpoGo()) {
-          setMessage('Finish Google sign-in in your browser. You will return to Expo Go automatically.');
+          setMessage(null);
         }
 
         return session;

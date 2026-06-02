@@ -7,7 +7,6 @@ import type { Session } from '@supabase/supabase-js';
 import type { PendingOAuthContext } from '@/lib/oauth-context';
 
 const OAUTH_CALLBACK_PATH = 'auth/callback';
-const DEFAULT_PRODUCTION_OAUTH_CALLBACK = 'https://gym-management-green.vercel.app/auth/callback';
 
 function readOAuthRedirectOverride(): string | null {
   const override = process.env.EXPO_PUBLIC_OAUTH_REDIRECT_URL?.trim();
@@ -19,28 +18,31 @@ function readExpoHostUri(): string | null {
   return hostUri && hostUri.length > 0 ? hostUri : null;
 }
 
-function readProductionOAuthCallback(): string {
-  return readOAuthRedirectOverride() ?? DEFAULT_PRODUCTION_OAUTH_CALLBACK;
-}
-
 export function isRunningInExpoGo(): boolean {
   return Constants.appOwnership === 'expo';
 }
 
+/** Expo Go deep link callback — Supabase accepts exp:// but often blocks private http:// IPs. */
+function buildExpoGoOAuthRedirectUri(): string {
+  return Linking.createURL(OAUTH_CALLBACK_PATH);
+}
+
 /**
  * Supabase redirect URL for the current runtime.
- * Expo Go uses the deployed HTTPS callback (already allowlisted) and passes the dev host for handoff.
+ * Expo Go uses exp:// deep links + in-app auth session (not LAN http in external Chrome).
  */
 export function buildOAuthRedirectUri(): string {
+  const override = readOAuthRedirectOverride();
+  if (override && Platform.OS !== 'web') {
+    return override;
+  }
+
   if (Platform.OS === 'web') {
     return makeRedirectUri({ path: OAUTH_CALLBACK_PATH, preferLocalhost: true });
   }
 
-  const hostUri = readExpoHostUri();
-  if (isRunningInExpoGo() && hostUri) {
-    const url = new URL(readProductionOAuthCallback());
-    url.searchParams.set('expo_host', hostUri);
-    return url.toString();
+  if (isRunningInExpoGo()) {
+    return buildExpoGoOAuthRedirectUri();
   }
 
   return Linking.createURL(OAUTH_CALLBACK_PATH);
@@ -100,8 +102,9 @@ export function readExpoHostFromCallbackSearch(search: string): string | undefin
 /** Lines to paste into Supabase → Authentication → Redirect URLs. */
 export function getSupabaseOAuthSetupInstructions(redirectUri = buildOAuthRedirectUri()): string[] {
   return [
-    'https://gym-management-green.vercel.app/**',
-    redirectUri.split('?')[0],
+    redirectUri,
+    'exp://*/--/auth/callback',
+    'exp://**',
     'http://localhost:8081/auth/callback',
     'gymapp://auth/callback',
   ];
@@ -111,12 +114,30 @@ export function isLocalhostOAuthRedirect(url: string): boolean {
   return /localhost|127\.0\.0\.1/i.test(url);
 }
 
-export function buildLocalhostRedirectError(): string {
-  return 'Supabase still redirected to localhost on your phone. In Redirect URLs keep https://gym-management-green.vercel.app/** and remove broken pasted entries. Site URL must be http://localhost:8081';
+export function buildLocalhostRedirectError(redirectUri = buildOAuthRedirectUri()): string {
+  return `Supabase redirected to localhost instead of ${redirectUri}. Add the exp:// URLs from the yellow hint to Supabase Redirect URLs.`;
+}
+
+export function assertSupabaseOAuthRedirect(oauthUrl: string, expectedRedirect: string): void {
+  try {
+    const parsed = new URL(oauthUrl);
+    const redirectParam = parsed.searchParams.get('redirect_to');
+    if (!redirectParam) return;
+
+    const decoded = decodeURIComponent(redirectParam);
+    if (isLocalhostOAuthRedirect(decoded) && !isLocalhostOAuthRedirect(expectedRedirect)) {
+      throw new Error(buildLocalhostRedirectError(expectedRedirect));
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('Supabase redirected')) {
+      throw error;
+    }
+  }
 }
 
 export const SUPABASE_OAUTH_REDIRECT_PATTERNS = [
-  'https://gym-management-green.vercel.app/**',
+  'exp://*/--/auth/callback',
+  'exp://**',
   'http://localhost:8081/auth/callback',
   'gymapp://auth/callback',
 ] as const;

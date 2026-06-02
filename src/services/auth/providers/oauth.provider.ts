@@ -3,7 +3,6 @@
  * Supabase Google OAuth via signInWithOAuth (native auth session + web redirect).
  */
 import * as QueryParams from 'expo-auth-session/build/QueryParams';
-import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
@@ -11,6 +10,7 @@ import type { Session } from '@supabase/supabase-js';
 import { ensureProfileForUser } from '@/api/profiles.api';
 import { popPendingOAuthContext, stashPendingOAuthContext } from '@/lib/oauth-context';
 import {
+  assertSupabaseOAuthRedirect,
   buildLocalhostRedirectError,
   buildOAuthRedirectUri,
   isLocalhostOAuthRedirect,
@@ -130,25 +130,27 @@ function logOAuthStartUrl(oauthUrl: string, redirectTo: string): void {
   }
 }
 
-function shouldUseExternalBrowserForOAuth(): boolean {
-  return isRunningInExpoGo();
-}
+function assertExpoGoRedirect(redirectTo: string): void {
+  if (!isRunningInExpoGo()) return;
 
-async function openOAuthInExternalBrowser(oauthUrl: string, redirectTo: string): Promise<null> {
-  logOAuthStartUrl(oauthUrl, redirectTo);
-
-  const canOpen = await Linking.canOpenURL(oauthUrl);
-  if (!canOpen) {
-    throw new Error('Could not open a browser for Google sign-in.');
+  if (redirectTo.startsWith('http://') || redirectTo.startsWith('https://')) {
+    throw new Error(
+      'OAuth is using an old redirect URL. Close Expo Go completely, run npx expo start -c, reopen the app, and try again.',
+    );
   }
 
-  await Linking.openURL(oauthUrl);
-  logger.info('auth.google.opened_external_browser', { redirectTo });
-  return null;
+  if (!redirectTo.startsWith('exp://')) {
+    throw new Error(
+      `Expo Go OAuth needs an exp:// redirect (got ${redirectTo}). Add the exp:// URLs from the yellow hint in Supabase.`,
+    );
+  }
 }
 
 async function openOAuthInAuthSession(oauthUrl: string, redirectTo: string): Promise<Session> {
+  assertExpoGoRedirect(redirectTo);
+  assertSupabaseOAuthRedirect(oauthUrl, redirectTo);
   logOAuthStartUrl(oauthUrl, redirectTo);
+  logger.info('auth.google.opened_auth_session', { redirectTo });
 
   try {
     await WebBrowser.warmUpAsync();
@@ -188,6 +190,9 @@ async function openOAuthInAuthSession(oauthUrl: string, redirectTo: string): Pro
       expected: redirectTo,
       received: result.url.split('#')[0],
     });
+    if (isLocalhostOAuthRedirect(result.url)) {
+      throw new Error(buildLocalhostRedirectError(redirectTo));
+    }
   }
 
   return completeOAuthFromUrl(result.url);
@@ -201,7 +206,12 @@ export async function signInWithGoogle(options: GoogleOAuthOptions = {}): Promis
   });
 
   const redirectTo = buildOAuthRedirectUri();
-  logger.info('auth.google.start', { redirectTo, platform: Platform.OS });
+  logger.info('auth.google.start', {
+    redirectTo,
+    platform: Platform.OS,
+    expoGo: isRunningInExpoGo(),
+    flow: 'auth_session',
+  });
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
@@ -226,10 +236,6 @@ export async function signInWithGoogle(options: GoogleOAuthOptions = {}): Promis
 
   if (!data.url) {
     throw new Error('Could not start Google sign-in. Please try again.');
-  }
-
-  if (shouldUseExternalBrowserForOAuth()) {
-    return openOAuthInExternalBrowser(data.url, redirectTo);
   }
 
   return openOAuthInAuthSession(data.url, redirectTo);
