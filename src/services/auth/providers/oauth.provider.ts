@@ -9,6 +9,7 @@ import type { Session } from '@supabase/supabase-js';
 
 import { ensureProfileForUser } from '@/api/profiles.api';
 import { popPendingOAuthContext, stashPendingOAuthContext } from '@/lib/oauth-context';
+import { useAuthStore } from '@/store/auth.store';
 import {
   assertSupabaseOAuthRedirect,
   buildLocalhostRedirectError,
@@ -42,15 +43,23 @@ async function finalizeOAuthSession(
   return session;
 }
 
-async function exchangeOAuthCode(code: string): Promise<Session> {
-  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+/** Exchanges PKCE authorization code (or full callback URL containing ?code=) for a session. */
+async function exchangeOAuthCode(codeOrCallbackUrl: string): Promise<Session> {
+  const authCode = codeOrCallbackUrl.includes('code=')
+    ? (extractOAuthCode(codeOrCallbackUrl, QueryParams.getQueryParams(codeOrCallbackUrl).params) ??
+      codeOrCallbackUrl)
+    : codeOrCallbackUrl;
+
+  const { data, error } = await supabase.auth.exchangeCodeForSession(authCode);
   if (error) {
     logger.warn('auth.google.exchangeCodeForSession failed', { error: error.message });
     throw error;
   }
 
   logger.info('auth.google.exchangeCodeForSession success', { userId: data.user?.id });
-  return finalizeOAuthSession(data.session, data.user);
+  const session = await finalizeOAuthSession(data.session, data.user);
+  useAuthStore.getState().setSession(session);
+  return session;
 }
 
 function extractOAuthCode(url: string, params: Record<string, string>): string | null {
@@ -83,7 +92,9 @@ async function completeOAuthFromTokens(
   }
 
   logger.info('auth.google.setSession success', { userId: data.user?.id });
-  return finalizeOAuthSession(data.session, data.user);
+  const session = await finalizeOAuthSession(data.session, data.user);
+  useAuthStore.getState().setSession(session);
+  return session;
 }
 
 /** Completes OAuth from an authorization code returned by Supabase. */

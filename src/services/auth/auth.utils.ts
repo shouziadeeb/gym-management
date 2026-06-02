@@ -180,7 +180,7 @@ export function mapOAuthErrorMessage(error: unknown): string {
     return buildLocalhostRedirectError();
   }
   if (message.includes('not_found') || message.includes('404')) {
-    return 'OAuth callback URL returned 404. For Expo Go dev, use the LAN URL from the yellow hint — do not use Vercel until /auth/callback is deployed there.';
+    return 'OAuth callback returned 404. Redeploy with vercel.json rewrites and add your /auth/callback URL in Supabase Redirect URLs.';
   }
 
   return fallback.length > 120 ? 'Google sign-in failed. Please try again.' : fallback;

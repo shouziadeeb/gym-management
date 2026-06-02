@@ -9,10 +9,12 @@ import { AuthStatusMessage } from '@/components/auth/AuthStatusMessage';
 import { useTheme } from '@/hooks/useTheme';
 import {
   buildExpoGoHandoffUrl,
+  isOAuthCallbackUrl,
   readExpoHostFromCallbackSearch,
   shouldHandoffOAuthToExpoGo,
 } from '@/lib/oauth-redirect';
 import { mapOAuthErrorMessage } from '@/services/auth/auth.utils';
+import { useAuthStore } from '@/store/auth.store';
 import type { AuthScreenMode } from '@/services/auth/auth.types';
 import {
   completeOAuthFromCode,
@@ -55,6 +57,8 @@ async function finishOAuthNavigation(
   session: Session,
   routeParams?: { mode?: AuthScreenMode; redirect?: string; expoHost?: string },
 ) {
+  useAuthStore.getState().setSession(session);
+
   if (shouldHandoffOAuthToExpoGo()) {
     const pending = await resolvePendingOAuthContext();
     const handoffUrl = buildExpoGoHandoffUrl(session, pending, routeParams?.expoHost);
@@ -126,21 +130,26 @@ export default function AuthCallbackRoute() {
         setErrorMessage(mapOAuthErrorMessage(error));
       });
 
-    const subscription = Linking.addEventListener('url', ({ url }) => {
-      void completeOAuthFromUrl(url)
-        .then(async (session) => {
-          if (cancelled) return;
-          await finishOAuthNavigation(session, { mode, redirect, expoHost });
-        })
-        .catch((error) => {
-          if (cancelled) return;
-          setErrorMessage(mapOAuthErrorMessage(error));
-        });
-    });
+    const subscription =
+      Platform.OS === 'web'
+        ? null
+        : Linking.addEventListener('url', ({ url }) => {
+            if (!isOAuthCallbackUrl(url)) return;
+
+            void completeOAuthFromUrl(url)
+              .then(async (session) => {
+                if (cancelled) return;
+                await finishOAuthNavigation(session, { mode, redirect, expoHost });
+              })
+              .catch((error) => {
+                if (cancelled) return;
+                setErrorMessage(mapOAuthErrorMessage(error));
+              });
+          });
 
     return () => {
       cancelled = true;
-      subscription.remove();
+      subscription?.remove();
     };
   }, [code, expoHost, mode, oauthError, oauthErrorDescription, redirect]);
 

@@ -7,6 +7,7 @@ import type { Session } from '@supabase/supabase-js';
 import type { PendingOAuthContext } from '@/lib/oauth-context';
 
 const OAUTH_CALLBACK_PATH = 'auth/callback';
+const APP_SCHEME = 'gymapp';
 
 function readOAuthRedirectOverride(): string | null {
   const override = process.env.EXPO_PUBLIC_OAUTH_REDIRECT_URL?.trim();
@@ -22,30 +23,44 @@ export function isRunningInExpoGo(): boolean {
   return Constants.appOwnership === 'expo';
 }
 
-/** Expo Go deep link callback — Supabase accepts exp:// but often blocks private http:// IPs. */
+/** Expo Go / dev client deep link — must match Supabase Redirect URLs (exp://…/--/auth/callback). */
 function buildExpoGoOAuthRedirectUri(): string {
-  return Linking.createURL(OAUTH_CALLBACK_PATH);
+  return makeRedirectUri({
+    path: OAUTH_CALLBACK_PATH,
+    preferLocalhost: false,
+  });
+}
+
+/** Standalone / EAS build deep link (gymapp://auth/callback). */
+function buildProductionNativeOAuthRedirectUri(): string {
+  return makeRedirectUri({
+    scheme: APP_SCHEME,
+    path: OAUTH_CALLBACK_PATH,
+  });
 }
 
 /**
  * Supabase redirect URL for the current runtime.
- * Expo Go uses exp:// deep links + in-app auth session (not LAN http in external Chrome).
+ * Web → https://host/auth/callback; Expo Go → exp://; production native → gymapp://.
  */
 export function buildOAuthRedirectUri(): string {
   const override = readOAuthRedirectOverride();
-  if (override && Platform.OS !== 'web') {
+  if (override) {
     return override;
   }
 
   if (Platform.OS === 'web') {
-    return makeRedirectUri({ path: OAUTH_CALLBACK_PATH, preferLocalhost: true });
+    return makeRedirectUri({
+      path: OAUTH_CALLBACK_PATH,
+      preferLocalhost: true,
+    });
   }
 
   if (isRunningInExpoGo()) {
     return buildExpoGoOAuthRedirectUri();
   }
 
-  return Linking.createURL(OAUTH_CALLBACK_PATH);
+  return buildProductionNativeOAuthRedirectUri();
 }
 
 /** Deep link used to return the session from the phone browser back into Expo Go. */
@@ -101,13 +116,20 @@ export function readExpoHostFromCallbackSearch(search: string): string | undefin
 
 /** Lines to paste into Supabase → Authentication → Redirect URLs. */
 export function getSupabaseOAuthSetupInstructions(redirectUri = buildOAuthRedirectUri()): string[] {
-  return [
+  const lines = [
     redirectUri,
     'exp://*/--/auth/callback',
     'exp://**',
     'http://localhost:8081/auth/callback',
     'gymapp://auth/callback',
   ];
+
+  const override = readOAuthRedirectOverride();
+  if (override && !lines.includes(override)) {
+    lines.push(override);
+  }
+
+  return lines;
 }
 
 export function isLocalhostOAuthRedirect(url: string): boolean {
@@ -135,9 +157,23 @@ export function assertSupabaseOAuthRedirect(oauthUrl: string, expectedRedirect: 
   }
 }
 
+/** Wildcard patterns safe to add in Supabase Redirect URLs. */
 export const SUPABASE_OAUTH_REDIRECT_PATTERNS = [
   'exp://*/--/auth/callback',
   'exp://**',
   'http://localhost:8081/auth/callback',
   'gymapp://auth/callback',
 ] as const;
+
+/** True when a deep-link callback URL matches the configured OAuth redirect prefix. */
+export function isOAuthCallbackUrl(url: string, redirectUri = buildOAuthRedirectUri()): boolean {
+  const callbackPrefix = redirectUri.split('?')[0];
+  if (url.startsWith(callbackPrefix)) return true;
+
+  try {
+    const parsed = Linking.parse(url);
+    return parsed.path === OAUTH_CALLBACK_PATH || parsed.path === `/${OAUTH_CALLBACK_PATH}`;
+  } catch {
+    return url.includes(OAUTH_CALLBACK_PATH);
+  }
+}
