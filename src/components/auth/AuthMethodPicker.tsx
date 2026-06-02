@@ -4,11 +4,9 @@
  */
 import { Pressable, Text, View } from 'react-native';
 
-import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton';
-import { SupabaseOAuthDevHint } from '@/components/auth/SupabaseOAuthDevHint';
 import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/hooks/useTheme';
-import type { AuthMethod, AuthScreenMode } from '@/services/auth/auth.types';
+import type { AuthMethod } from '@/services/auth/auth.types';
 import { layout, text } from '@/theme/classes';
 
 /** Horizontal rule with centered "or" between stacked auth method buttons. */
@@ -25,18 +23,12 @@ function AuthOrDivider() {
 }
 
 type AuthMethodPickerProps = {
-  mode: AuthScreenMode;
   onSelect: (method: AuthMethod) => void;
-  onGooglePress: () => void;
-  googleLoading?: boolean;
 };
 
-export function AuthMethodPicker({ mode, onSelect, onGooglePress, googleLoading = false }: AuthMethodPickerProps) {
+export function AuthMethodPicker({ onSelect }: AuthMethodPickerProps) {
   return (
     <View className={layout.vstackMd}>
-      <GoogleAuthButton mode={mode} onPress={onGooglePress} loading={googleLoading} />
-      <SupabaseOAuthDevHint />
-      <AuthOrDivider />
       <Button title="Continue with Phone" onPress={() => onSelect('phone')} />
       <AuthOrDivider />
       <Button title="Continue with Email" variant="ghost" onPress={() => onSelect('email')} />

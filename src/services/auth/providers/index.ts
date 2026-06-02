@@ -11,10 +11,3 @@ export {
   requestPasswordReset,
   resendSignupConfirmation,
 } from '@/services/auth/providers/email.provider';
-export {
-  completeOAuthFromCode,
-  completeOAuthFromUrl,
-  resolvePendingOAuthContext,
-  signInWithGoogle,
-} from '@/services/auth/providers/oauth.provider';
-export type { GoogleOAuthOptions } from '@/services/auth/providers/oauth.provider';

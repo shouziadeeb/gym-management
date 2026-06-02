@@ -132,17 +132,6 @@ export default function RootLayout() {
                 }}
               />
               <Stack.Screen
-                name="auth/callback"
-                options={{
-                  contentStyle: {
-                    backgroundColor: "transparent",
-                    flex: 1,
-                    width: "100%",
-                    minHeight: "100%",
-                  },
-                }}
-              />
-              <Stack.Screen
                 name="profile-setup"
                 options={{
                   contentStyle: {

@@ -1,7 +1,7 @@
 /**
  * @file auth.constants.ts
  * Central auth configuration: OTP lengths, cooldowns, bridge email domains,
- * Supabase error code lists, and future OAuth provider identifiers.
+ * Supabase error code lists, and auth provider identifiers.
  */
 /** Primary internal domain for phone→pseudo-email bridge (never shown in UI). */
 export const PHONE_BRIDGE_DOMAIN = 'app.local';

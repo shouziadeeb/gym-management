@@ -4,7 +4,6 @@
  */
 import type { User } from '@supabase/supabase-js';
 
-import { buildLocalhostRedirectError } from '@/lib/oauth-redirect';
 import {
   LEGACY_PHONE_BRIDGE_DOMAINS,
   LOGIN_NOT_FOUND_MESSAGES,
@@ -157,31 +156,4 @@ export function mapAuthErrorMessage(error: unknown, method: AuthMethod): string 
   }
 
   return fallback;
-}
-
-/** Converts Google OAuth errors into short, user-friendly messages. */
-export function mapOAuthErrorMessage(error: unknown): string {
-  const fallback = error instanceof Error ? error.message : String(error ?? 'Something went wrong');
-  const message = fallback.toLowerCase();
-
-  if (message.includes('cancel')) {
-    return 'Google sign-in was cancelled.';
-  }
-  if (message.includes('network') || message.includes('fetch')) {
-    return 'Network error. Check your connection and try again.';
-  }
-  if (isSignupDuplicateError({ message })) {
-    return 'This Google account is already registered. Try logging in instead.';
-  }
-  if (message.includes('access_denied') || message.includes('permission')) {
-    return 'Google sign-in was denied. Please allow access and try again.';
-  }
-  if (message.includes('localhost') || message.includes('redirected to localhost')) {
-    return buildLocalhostRedirectError();
-  }
-  if (message.includes('not_found') || message.includes('404')) {
-    return 'OAuth callback returned 404. Redeploy with vercel.json rewrites and add your /auth/callback URL in Supabase Redirect URLs.';
-  }
-
-  return fallback.length > 120 ? 'Google sign-in failed. Please try again.' : fallback;
 }

@@ -25,19 +25,6 @@
       "package": "com.gym.saas",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "intentFilters": [
-        {
-          "action": "VIEW",
-          "autoVerify": false,
-          "data": [
-            {
-              "scheme": "gymapp",
-              "pathPrefix": "/auth/callback"
-            }
-          ],
-          "category": ["BROWSABLE", "DEFAULT"]
-        }
-      ],
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
@@ -77,8 +64,7 @@
           "recordAudioAndroid": false
         }
       ],
-      "expo-router",
-      "expo-web-browser"
+      "expo-router"
     ],
     "extra": {
       "router": {},
