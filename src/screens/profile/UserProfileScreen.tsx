@@ -1,8 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { router } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Text, View } from 'react-native';
-import { z } from 'zod';
 
 import { updateMyProfile } from '@/api/profiles.api';
 import { queryClient } from '@/api/queries/client';
@@ -14,7 +14,12 @@ import { Input } from '@/components/ui/Input';
 import { LocationPickerField } from '@/components/ui/LocationPickerField';
 import { Screen } from '@/components/ui/Screen';
 import { SelectField } from '@/components/ui/SelectField';
-import { resolveDisplayName, resolveProfileAddress } from '@/domain/profiles';
+import {
+  isEmailAuthUser,
+  resolveDisplayName,
+  resolveProfileAddress,
+  resolveProfileEmail,
+} from '@/domain/profiles';
 import {
   PROFILE_GENDER_OPTIONS,
   ageFromDateOfBirth,
@@ -22,6 +27,7 @@ import {
   formatGenderLabel,
   type ProfileGenderValue,
 } from '@/features/profile/labels';
+import { createProfileFormSchema, type ProfileFormValues } from '@/features/profile/schema';
 import { useMyProfile } from '@/hooks/useMyProfile';
 import { getErrorMessage } from '@/lib/errors';
 import { useAuthStore } from '@/store/auth.store';
@@ -33,36 +39,6 @@ function resolveGender(gender: string | null | undefined): ProfileGenderValue {
   if (gender === 'male' || gender === 'female' || gender === 'prefer_not_to_say') return gender;
   return 'prefer_not_to_say';
 }
-
-const profileEditSchema = z
-  .object({
-    fullName: z.string().trim().min(2, 'Full name is required'),
-    phone: z.string().trim().min(5, 'Phone is required'),
-    gender: z.enum(['male', 'female', 'prefer_not_to_say'], { message: 'Select a valid gender' }),
-    dateOfBirth: z.string().transform((v) => v.trim()),
-    city: z.string().transform((v) => v.trim()),
-    fitnessGoal: z.string().transform((v) => v.trim()),
-    homeLatitude: z.number().nullable(),
-    homeLongitude: z.number().nullable(),
-    homeLocationLabel: z.string().transform((v) => v.trim()),
-  })
-  .superRefine((values, ctx) => {
-    if (!values.dateOfBirth) return;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(values.dateOfBirth)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['dateOfBirth'], message: 'Use a valid date' });
-      return;
-    }
-    const age = ageFromDateOfBirth(values.dateOfBirth);
-    if (age == null || age < 13 || age > 100) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['dateOfBirth'],
-        message: 'Age must be between 13 and 100',
-      });
-    }
-  });
-
-type ProfileEditForm = z.infer<typeof profileEditSchema>;
 
 function ProfileDetailRow({ label, value }: { label: string; value: string }) {
   return (
@@ -81,8 +57,16 @@ export function UserProfileScreen() {
   const [isOpeningEdit, setIsOpeningEdit] = useState(false);
 
   const profile = profileQuery.data;
+  const isEmailUser = isEmailAuthUser(profile, session?.user ?? null);
+  const resolvedEmail = resolveProfileEmail(profile, session?.user ?? null);
   const resolvedPhone = profile?.phone ?? session?.user.phone ?? null;
-  const resolvedName = resolveDisplayName(profile?.full_name, resolvedPhone, session?.user.id ?? null);
+  const isOnboarding = !profile?.onboarding_completed;
+  const phoneRequired = !isEmailUser;
+  const resolvedName = resolveDisplayName(
+    profile?.full_name,
+    isEmailUser ? resolvedEmail : resolvedPhone,
+    session?.user.id ?? null,
+  );
   const resolvedAge =
     profile?.age != null
       ? String(profile.age)
@@ -91,6 +75,11 @@ export function UserProfileScreen() {
         : '';
 
   const profileAddress = resolveProfileAddress(profile);
+
+  const profileSchema = useMemo(
+    () => createProfileFormSchema({ phoneRequired }),
+    [phoneRequired],
+  );
 
   const birthDateBounds = useMemo(() => {
     const maximumDate = new Date();
@@ -101,7 +90,7 @@ export function UserProfileScreen() {
     return { maximumDate, minimumDate };
   }, []);
 
-  const defaults = useMemo<ProfileEditForm>(
+  const defaults = useMemo<ProfileFormValues>(
     () => ({
       fullName: resolvedName,
       phone: resolvedPhone ?? '',
@@ -116,14 +105,18 @@ export function UserProfileScreen() {
     [profile, resolvedName, resolvedPhone],
   );
 
-  const form = useForm<ProfileEditForm>({
-    resolver: zodResolver(profileEditSchema),
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
     values: defaults,
   });
 
-  function buildFormValues(source = profile): ProfileEditForm {
+  function buildFormValues(source = profile): ProfileFormValues {
     const phone = source?.phone ?? session?.user.phone ?? '';
-    const name = resolveDisplayName(source?.full_name, phone, session?.user.id ?? null);
+    const name = resolveDisplayName(
+      source?.full_name,
+      isEmailUser ? resolvedEmail : phone,
+      session?.user.id ?? null,
+    );
 
     return {
       fullName: name,
@@ -149,16 +142,25 @@ export function UserProfileScreen() {
     }
   }
 
+  useEffect(() => {
+    if (profileQuery.isLoading || profileQuery.isError || isEditing) return;
+    if (isOnboarding) {
+      form.reset(buildFormValues());
+      setIsEditing(true);
+    }
+  }, [profileQuery.isLoading, profileQuery.isError, isOnboarding, isEditing]);
+
   const saveProfile = form.handleSubmit(async (values) => {
     const userId = session?.user.id;
     if (!userId) return;
 
     const computedAge = values.dateOfBirth ? ageFromDateOfBirth(values.dateOfBirth) : profile?.age ?? null;
+    const trimmedPhone = values.phone.trim();
 
     try {
       await updateMyProfile(userId, {
         full_name: values.fullName.trim(),
-        phone: values.phone.trim(),
+        phone: trimmedPhone || null,
         gender: values.gender,
         age: computedAge,
         date_of_birth: values.dateOfBirth || (profile?.date_of_birth ?? null),
@@ -172,6 +174,12 @@ export function UserProfileScreen() {
 
       await queryClient.invalidateQueries({ queryKey: queryKeys.profile.me(userId) });
       setIsEditing(false);
+
+      if (isOnboarding) {
+        router.replace('/(tabs)/profile-hub');
+        return;
+      }
+
       Alert.alert('Saved', 'Your profile was updated.');
     } catch (error) {
       form.setError('root', { message: getErrorMessage(error) });
@@ -210,7 +218,11 @@ export function UserProfileScreen() {
 
       {!isEditing ? (
         <Card title="Account details" className={layout.section}>
-          <ProfileDetailRow label="Phone" value={resolvedPhone ?? 'Not set'} />
+          {isEmailUser ? (
+            <ProfileDetailRow label="Email" value={resolvedEmail ?? 'Not set'} />
+          ) : (
+            <ProfileDetailRow label="Phone" value={resolvedPhone ?? 'Not set'} />
+          )}
           <ProfileDetailRow label="Full name" value={resolvedName} />
           <ProfileDetailRow label="Gender" value={formatGenderLabel(profile?.gender ?? null)} />
           <ProfileDetailRow
@@ -230,13 +242,37 @@ export function UserProfileScreen() {
         </Card>
       ) : (
         <Card title="Edit profile" className={layout.section}>
-          <Controller
-            control={form.control}
-            name="phone"
-            render={({ field: { onChange, value } }) => (
-              <Input label="Phone" placeholder="+919876543210" value={value} onChangeText={onChange} keyboardType="phone-pad" />
-            )}
-          />
+          {isEmailUser ? (
+            <Input
+              label="Email"
+              value={resolvedEmail ?? ''}
+              editable={false}
+              autoCapitalize="none"
+            />
+          ) : (
+            <Controller
+              control={form.control}
+              name="phone"
+              render={({ field: { onChange, value } }) => (
+                <Input label="Phone" placeholder="+919876543210" value={value} onChangeText={onChange} keyboardType="phone-pad" />
+              )}
+            />
+          )}
+          {isEmailUser ? (
+            <Controller
+              control={form.control}
+              name="phone"
+              render={({ field: { onChange, value } }) => (
+                <Input
+                  label={isOnboarding ? 'Phone (optional)' : 'Phone'}
+                  placeholder="+919876543210"
+                  value={value}
+                  onChangeText={onChange}
+                  keyboardType="phone-pad"
+                />
+              )}
+            />
+          ) : null}
           <Controller
             control={form.control}
             name="fullName"
@@ -319,25 +355,31 @@ export function UserProfileScreen() {
           {form.formState.errors.root?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.root.message}</Text> : null}
 
           <View className="flex-row" style={{ gap: spacing[2] }}>
+            {!isOnboarding ? (
+              <View className="flex-1">
+                <Button
+                  title="Cancel"
+                  variant="ghost"
+                  onPress={() => {
+                    form.reset(buildFormValues());
+                    setIsEditing(false);
+                  }}
+                  disabled={form.formState.isSubmitting}
+                />
+              </View>
+            ) : null}
             <View className="flex-1">
               <Button
-                title="Cancel"
-                variant="ghost"
-                onPress={() => {
-                  form.reset(buildFormValues());
-                  setIsEditing(false);
-                }}
-                disabled={form.formState.isSubmitting}
+                title={isOnboarding ? 'Complete setup' : 'Save changes'}
+                onPress={saveProfile}
+                loading={form.formState.isSubmitting}
               />
-            </View>
-            <View className="flex-1">
-              <Button title="Save changes" onPress={saveProfile} loading={form.formState.isSubmitting} />
             </View>
           </View>
         </Card>
       )}
 
-    
+
     </Screen>
   );
 }

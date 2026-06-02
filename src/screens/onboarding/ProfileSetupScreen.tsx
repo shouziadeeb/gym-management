@@ -3,7 +3,6 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
 import { useMemo } from 'react';
 import { Text, View } from 'react-native';
-import { z } from 'zod';
 
 import { updateMyProfile } from '@/api/profiles.api';
 import { queryClient } from '@/api/queries/client';
@@ -15,54 +14,31 @@ import { LocationPickerField } from '@/components/ui/LocationPickerField';
 import { OnboardingFormPanel } from '@/components/onboarding/OnboardingFormPanel';
 import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen';
 import { SelectField } from '@/components/ui/SelectField';
-import { buildDefaultDisplayName } from '@/domain/profiles';
+import { buildDefaultDisplayName, isEmailAuthUser, resolveProfileEmail } from '@/domain/profiles';
 import { PROFILE_GENDER_OPTIONS, ageFromDateOfBirth } from '@/features/profile/labels';
+import { createProfileFormSchema, type ProfileFormValues } from '@/features/profile/schema';
 import { getErrorMessage } from '@/lib/errors';
 import { useMyProfile } from '@/hooks/useMyProfile';
 import { useAuthStore } from '@/store/auth.store';
 import { layout, text } from '@/theme/classes';
-
-const ONBOARDING_GENDERS = ['male', 'female', 'prefer_not_to_say'] as const;
-
-const profileSchema = z
-  .object({
-    fullName: z.string().trim().min(2, 'Full name is required'),
-    phone: z.string().trim().min(5, 'Phone is required'),
-    gender: z.enum(ONBOARDING_GENDERS, { message: 'Select a valid gender' }),
-    dateOfBirth: z.string().transform((v) => (v ?? '').trim()),
-    city: z.string().transform((v) => (v ?? '').trim()),
-    fitnessGoal: z.string().transform((v) => (v ?? '').trim()),
-    homeLatitude: z.union([z.number(), z.null()]),
-    homeLongitude: z.union([z.number(), z.null()]),
-    homeLocationLabel: z.string().transform((v) => (v ?? '').trim()),
-  })
-  .superRefine((values, ctx) => {
-    if (!values.dateOfBirth) return;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(values.dateOfBirth)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['dateOfBirth'], message: 'Select a valid date' });
-      return;
-    }
-    const age = ageFromDateOfBirth(values.dateOfBirth);
-    if (age == null || age < 13 || age > 100) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['dateOfBirth'], message: 'Age must be between 13 and 100' });
-    }
-  });
-
-type ProfileForm = z.infer<typeof profileSchema>;
 
 export function ProfileSetupScreen() {
   const { redirect } = useLocalSearchParams<{ redirect?: string }>();
   const session = useAuthStore((state) => state.session);
   const profileQuery = useMyProfile();
   const sessionPhone = session?.user.phone ?? null;
+  const isEmailUser = isEmailAuthUser(profileQuery.data, session?.user ?? null);
+  const resolvedEmail = resolveProfileEmail(profileQuery.data, session?.user ?? null);
 
-  const defaults = useMemo<ProfileForm>(() => {
+  const defaults = useMemo<ProfileFormValues>(() => {
     const profile = profileQuery.data;
     const resolvedPhone = profile?.phone ?? sessionPhone ?? '';
-    const resolvedName = profile?.full_name?.trim() || buildDefaultDisplayName(resolvedPhone, session?.user.id);
+    const resolvedName =
+      profile?.full_name?.trim() ||
+      buildDefaultDisplayName(isEmailUser ? resolvedEmail : resolvedPhone, session?.user.id);
 
     const rawGender = profile?.gender;
-    const gender: ProfileForm['gender'] =
+    const gender: ProfileFormValues['gender'] =
       rawGender === 'male' || rawGender === 'female' || rawGender === 'prefer_not_to_say'
         ? rawGender
         : 'prefer_not_to_say';
@@ -78,7 +54,12 @@ export function ProfileSetupScreen() {
       homeLongitude: typeof profile?.home_longitude === 'number' ? profile.home_longitude : null,
       homeLocationLabel: profile?.home_location_label ?? '',
     };
-  }, [profileQuery.data, sessionPhone, session?.user.id]);
+  }, [profileQuery.data, sessionPhone, session?.user.id, isEmailUser, resolvedEmail]);
+
+  const profileSchema = useMemo(
+    () => createProfileFormSchema({ phoneRequired: !isEmailUser }),
+    [isEmailUser],
+  );
 
   const birthDateBounds = useMemo(() => {
     const maximumDate = new Date();
@@ -88,7 +69,7 @@ export function ProfileSetupScreen() {
     return { maximumDate, minimumDate };
   }, []);
 
-  const form = useForm<ProfileForm>({
+  const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     values: defaults,
   });
@@ -99,10 +80,11 @@ export function ProfileSetupScreen() {
 
     try {
       const computedAge = values.dateOfBirth ? ageFromDateOfBirth(values.dateOfBirth) : null;
+      const trimmedPhone = values.phone.trim();
 
       await updateMyProfile(userId, {
         full_name: values.fullName.trim(),
-        phone: values.phone.trim(),
+        phone: trimmedPhone || null,
         gender: values.gender,
         age: computedAge,
         date_of_birth: values.dateOfBirth || null,
@@ -140,13 +122,37 @@ export function ProfileSetupScreen() {
         </Text>
 
         <View className={layout.sectionXl}>
-        <Controller
-          control={form.control}
-          name="phone"
-          render={({ field: { onChange, value } }) => (
-            <Input label="Phone" placeholder="+919876543210" value={value} onChangeText={onChange} keyboardType="phone-pad" />
-          )}
-        />
+        {isEmailUser ? (
+          <Input
+            label="Email"
+            value={resolvedEmail ?? ''}
+            editable={false}
+            autoCapitalize="none"
+          />
+        ) : (
+          <Controller
+            control={form.control}
+            name="phone"
+            render={({ field: { onChange, value } }) => (
+              <Input label="Phone" placeholder="+919876543210" value={value} onChangeText={onChange} keyboardType="phone-pad" />
+            )}
+          />
+        )}
+        {isEmailUser ? (
+          <Controller
+            control={form.control}
+            name="phone"
+            render={({ field: { onChange, value } }) => (
+              <Input
+                label="Phone (optional)"
+                placeholder="+919876543210"
+                value={value}
+                onChangeText={onChange}
+                keyboardType="phone-pad"
+              />
+            )}
+          />
+        ) : null}
         <Controller
           control={form.control}
           name="fullName"

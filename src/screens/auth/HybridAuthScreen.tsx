@@ -35,10 +35,18 @@ function buildAuthRoute(pathname: '/auth/login' | '/auth/signup', redirect?: str
   return query ? `${pathname}?${query}` : pathname;
 }
 
-/** After OTP success: signup → profile-setup; login → redirect or home. */
-function postAuthNavigate(mode: AuthScreenMode, redirect?: string) {
+/** After OTP success: signup → onboarding; login → redirect or home. */
+function postAuthNavigate(
+  mode: AuthScreenMode,
+  redirect?: string,
+  authMethod?: 'phone' | 'email' | null,
+) {
   const targetRedirect = typeof redirect === 'string' && redirect.length > 0 ? redirect : '/';
   if (mode === 'signup') {
+    if (authMethod === 'email') {
+      router.replace('/profile' as never);
+      return;
+    }
     router.replace(`/profile-setup?redirect=${encodeURIComponent(targetRedirect)}` as never);
   } else {
     router.replace(targetRedirect as never);
@@ -94,7 +102,7 @@ export function HybridAuthScreen({ mode = 'login' }: HybridAuthScreenProps) {
       } else {
         await emailAuth.verifyCode(otpValue);
       }
-      postAuthNavigate(mode, typeof redirect === 'string' ? redirect : undefined);
+      postAuthNavigate(mode, typeof redirect === 'string' ? redirect : undefined, hybrid.method);
     } catch {
       // message set on hook
     }

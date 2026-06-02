@@ -7,13 +7,14 @@ import { inputSurface, textColor } from '@/theme/styles';
 type Props = {
   label: string;
   value: string | undefined;
-  onChangeText: (v: string) => void;
+  onChangeText?: (v: string) => void;
   onBlur?: () => void;
   placeholder?: string;
   keyboardType?: 'default' | 'phone-pad' | 'number-pad' | 'email-address';
   autoComplete?: 'email' | 'password' | 'off';
   secureTextEntry?: boolean;
   autoCapitalize?: 'none' | 'sentences' | 'words';
+  editable?: boolean;
 };
 
 export function Input({
@@ -26,6 +27,7 @@ export function Input({
   secureTextEntry,
   autoCapitalize = 'none',
   autoComplete,
+  editable = true,
 }: Props) {
   const { colors } = useTheme();
 
@@ -42,6 +44,7 @@ export function Input({
         value={value ?? ''}
         onChangeText={onChangeText}
         onBlur={onBlur}
+        editable={editable}
         keyboardType={keyboardType}
         secureTextEntry={secureTextEntry}
         autoCapitalize={autoCapitalize}

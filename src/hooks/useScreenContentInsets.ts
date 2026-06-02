@@ -6,6 +6,7 @@ import {
   screenTopPadding,
   shouldOmitTopSafeAreaForRoute,
   stackContentTopGap,
+  tabScrollTopPadding,
 } from '@/lib/safe-area';
 
 type Options = {
@@ -28,11 +29,13 @@ export function useScreenContentInsets(options?: Options) {
   const topInset = screenTopPadding(insets, omitTopSafeArea);
   const bottomInset = screenScrollBottomPadding(insets, inTabs);
   const contentTopGap = omitTopSafeArea ? stackContentTopGap : 0;
+  const tabTopPadding = inTabs ? tabScrollTopPadding(insets) : 0;
 
   return {
     topInset,
     bottomInset,
     contentTopGap,
+    tabTopPadding,
     omitTopSafeArea,
     insets,
     inTabs,

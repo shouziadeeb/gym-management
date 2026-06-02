@@ -3,7 +3,7 @@ import { UserProfileScreen } from '@/screens/profile/UserProfileScreen';
 
 export default function ProfileRoute() {
   return (
-    <ProtectedRoute redirectPath={routes.profile} authIntent="member_dashboard" requireProfile>
+    <ProtectedRoute redirectPath={routes.profile} authIntent="member_dashboard">
       <UserProfileScreen />
     </ProtectedRoute>
   );

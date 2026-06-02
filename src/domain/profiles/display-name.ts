@@ -36,5 +36,12 @@ export function resolveDisplayName(
 /** Whether onboarding is complete enough for gated app features. */
 export function isProfileComplete(profile: Profile | null | undefined): boolean {
   if (!profile) return false;
-  return Boolean(profile.onboarding_completed && profile.full_name?.trim() && profile.phone);
+  if (!profile.onboarding_completed || !profile.full_name?.trim()) return false;
+
+  const isEmailUser = profile.auth_type === 'email' || profile.auth_provider === 'email';
+  if (isEmailUser) {
+    return Boolean(profile.email?.trim());
+  }
+
+  return Boolean(profile.phone);
 }

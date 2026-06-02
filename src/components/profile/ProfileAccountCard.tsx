@@ -2,13 +2,14 @@
  * @file ProfileAccountCard.tsx
  * "My Account" card with icon rows and outline "My profile" action.
  */
-import { router } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
-import { MapPin, MoreVertical, Pencil, Phone, User } from 'lucide-react-native';
-import type { LucideIcon } from 'lucide-react-native';
+import { router } from "expo-router";
+import { Pressable, Text, View } from "react-native";
+import { MapPin, MoreVertical, Pencil, Phone, User } from "lucide-react-native";
+import type { LucideIcon } from "lucide-react-native";
 
-import { useTheme } from '@/hooks/useTheme';
-import { spacing } from '@/theme/spacing';
+import { useOpenProfileMenu } from "@/hooks/useOpenProfileMenu";
+import { useTheme } from "@/hooks/useTheme";
+import { spacing } from "@/theme/spacing";
 
 type AccountRow = {
   icon: LucideIcon;
@@ -19,22 +20,17 @@ type AccountRow = {
 type ProfileAccountCardProps = {
   rows: AccountRow[];
   profileComplete: boolean;
-  onOpenMenu: () => void;
   onCompleteProfile?: () => void;
 };
 
-function AccountInfoRow({
-  icon: Icon,
-  label,
-  value,
-}: AccountRow) {
+function AccountInfoRow({ icon: Icon, label, value }: AccountRow) {
   const { colors } = useTheme();
 
   return (
     <View
       style={{
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
         gap: spacing[3],
         marginBottom: spacing[3],
       }}
@@ -45,15 +41,20 @@ function AccountInfoRow({
           height: 40,
           borderRadius: 10,
           backgroundColor: colors.chipInactive,
-          alignItems: 'center',
-          justifyContent: 'center',
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
         <Icon size={18} color={colors.primary} strokeWidth={2} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 12, color: colors.muted, marginBottom: 2 }}>{label}</Text>
-        <Text style={{ fontSize: 15, fontWeight: '600', color: colors.foreground }} numberOfLines={2}>
+        <Text style={{ fontSize: 12, color: colors.muted, marginBottom: 2 }}>
+          {label}
+        </Text>
+        <Text
+          style={{ fontSize: 15, fontWeight: "600", color: colors.foreground }}
+          numberOfLines={2}
+        >
           {value}
         </Text>
       </View>
@@ -64,10 +65,10 @@ function AccountInfoRow({
 export function ProfileAccountCard({
   rows,
   profileComplete,
-  onOpenMenu,
   onCompleteProfile,
 }: ProfileAccountCardProps) {
   const { colors } = useTheme();
+  const { triggerRef, openMenu } = useOpenProfileMenu();
 
   return (
     <View
@@ -82,20 +83,32 @@ export function ProfileAccountCard({
     >
       <View
         style={{
-          flexDirection: 'row',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
+          flexDirection: "row",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
           marginBottom: spacing[1],
         }}
       >
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: colors.foreground }}>My Account</Text>
-          <Text style={{ fontSize: 13, color: colors.muted, marginTop: spacing[1] }}>
+          <Text
+            style={{
+              fontSize: 18,
+              fontWeight: "700",
+              color: colors.foreground,
+            }}
+          >
+            My Account
+          </Text>
+          <Text
+            style={{ fontSize: 13, color: colors.muted, marginTop: spacing[1] }}
+          >
             Manage your account and gym settings.
           </Text>
         </View>
         <Pressable
-          onPress={onOpenMenu}
+          ref={triggerRef}
+          collapsable={false}
+          onPress={openMenu}
           hitSlop={10}
           style={{ padding: spacing[1] }}
           accessibilityRole="button"
@@ -126,11 +139,11 @@ export function ProfileAccountCard({
       ) : null}
 
       <Pressable
-        onPress={() => router.push('/profile')}
+        onPress={() => router.push("/profile")}
         style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
           gap: spacing[2],
           borderWidth: 1,
           borderColor: colors.border,
@@ -142,7 +155,11 @@ export function ProfileAccountCard({
         accessibilityLabel="Open my profile"
       >
         <Pencil size={16} color={colors.foreground} strokeWidth={2} />
-        <Text style={{ fontSize: 15, fontWeight: '600', color: colors.foreground }}>My profile</Text>
+        <Text
+          style={{ fontSize: 15, fontWeight: "600", color: colors.foreground }}
+        >
+          My profile
+        </Text>
       </Pressable>
     </View>
   );

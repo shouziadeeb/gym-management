@@ -1,14 +1,18 @@
 import { create } from 'zustand';
 
+import type { MenuAnchorRect } from '@/lib/measure-menu-anchor';
+
 type ProfileMenuState = {
   isOpen: boolean;
-  open: () => void;
+  anchor: MenuAnchorRect | null;
+  open: (anchor: MenuAnchorRect) => void;
   close: () => void;
 };
 
 export const useProfileMenuStore = create<ProfileMenuState>((set) => ({
   isOpen: false,
-  open: () => set({ isOpen: true }),
-  close: () => set({ isOpen: false }),
+  anchor: null,
+  open: (anchor) => set({ isOpen: true, anchor }),
+  close: () => set({ isOpen: false, anchor: null }),
 }));
 

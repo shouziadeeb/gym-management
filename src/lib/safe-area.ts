@@ -1,7 +1,16 @@
-import { Platform } from 'react-native';
+import { Platform, StatusBar } from 'react-native';
 import type { EdgeInsets } from 'react-native-safe-area-context';
 
 import { screenLayout, spacing } from '@/theme/spacing';
+
+/** Status-bar height when safe-area insets are 0 (Android edge-to-edge). */
+export function effectiveTopInset(insets: EdgeInsets): number {
+  if (insets.top > 0) return insets.top;
+  if (Platform.OS === 'android') {
+    return StatusBar.currentHeight ?? spacing[12];
+  }
+  return spacing[3];
+}
 
 /** Routes that render {@link GlobalBackButton} above the stack — skip top safe-area on Screen. */
 export function shouldOmitTopSafeAreaForRoute(segments: string[]): boolean {
@@ -35,6 +44,11 @@ export function screenScrollBottomPadding(insets: EdgeInsets, inTabs: boolean): 
 /** Top inset when Screen applies its own status-bar padding (tab routes). */
 export function screenTopPadding(insets: EdgeInsets, omitTopSafeArea: boolean): number {
   return omitTopSafeArea ? 0 : insets.top;
+}
+
+/** Top padding for tab scroll content (Android edge-to-edge may not inset SafeAreaView children). */
+export function tabScrollTopPadding(insets: EdgeInsets): number {
+  return effectiveTopInset(insets) + spacing[2];
 }
 
 /** Small gap below the global back row on stack screens. */

@@ -1,16 +1,25 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { router } from "expo-router";
+import { useState } from "react";
+import { Text, View } from "react-native";
+import {
+  LogIn,
+  LogOut,
+  Monitor,
+  Moon,
+  Settings,
+  Sun,
+} from "lucide-react-native";
 
-import { Button } from '@/components/ui/Button';
-import { Chip } from '@/components/ui/Chip';
-import { ModalCard } from '@/components/ui/ModalCard';
-import { useTheme } from '@/hooks/useTheme';
-import { signOut } from '@/services/auth/auth.service';
-import { useAppStore } from '@/store/app.store';
-import { useAuthStore } from '@/store/auth.store';
-import { useProfileMenuStore } from '@/store/profile-menu.store';
-import { layout, text } from '@/theme/classes';
+import { DropdownMenu } from "@/components/ui/DropdownMenu";
+import { MenuDivider, MenuGroup, MenuItem } from "@/components/ui/MenuItems";
+import { Button } from "@/components/ui/Button";
+import { ModalCard } from "@/components/ui/ModalCard";
+import { useTheme } from "@/hooks/useTheme";
+import { signOut } from "@/services/auth/auth.service";
+import { useAppStore } from "@/store/app.store";
+import { useAuthStore } from "@/store/auth.store";
+import { useProfileMenuStore } from "@/store/profile-menu.store";
+import { layout, text } from "@/theme/classes";
 
 /** Theme, settings, and auth actions — available to guests and signed-in users. */
 export function AppOptionsMenu() {
@@ -18,6 +27,7 @@ export function AppOptionsMenu() {
   const session = useAuthStore((state) => state.session);
   const resetGymContext = useAppStore((state) => state.resetGymContext);
   const showMenu = useProfileMenuStore((state) => state.isOpen);
+  const menuAnchor = useProfileMenuStore((state) => state.anchor);
   const closeMenu = useProfileMenuStore((state) => state.close);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -30,61 +40,107 @@ export function AppOptionsMenu() {
     setShowLogoutConfirm(false);
   }
 
+  function closeAndRun(action: () => void) {
+    closeMenu();
+    action();
+  }
+
   return (
     <>
-      <ModalCard visible={showMenu} onClose={closeMenu} anchor="top">
-        <Text className={text.cardTitle}>App menu</Text>
-        <Text className={`${layout.stackSm} ${text.caption}`}>Appearance and account shortcuts.</Text>
+      <DropdownMenu
+        visible={showMenu}
+        anchor={menuAnchor}
+        onClose={closeMenu}
+      >
+        <MenuGroup>
+          <MenuItem
+            label="Settings"
+            icon={Settings}
+            onPress={() =>
+              closeAndRun(() => {
+                router.push("/settings");
+              })
+            }
+          />
+        </MenuGroup>
 
-        <Text className={`mt-3 ${text.label}`}>Theme</Text>
-        <View className="mt-2 flex-row flex-wrap gap-2">
-          <Chip label="System" active={preference === 'system'} onPress={() => setPreference('system')} />
-          <Chip label="Light" active={preference === 'light'} onPress={() => setPreference('light')} />
-          <Chip label="Dark" active={preference === 'dark'} onPress={() => setPreference('dark')} />
-        </View>
+        <MenuDivider />
 
-        <View className="mt-4">
-          <Button
-            title="Open settings"
-            variant="ghost"
+        <MenuGroup>
+          <MenuItem
+            label="Light"
+            icon={Sun}
+            selected={preference === "light"}
             onPress={() => {
+              setPreference("light");
               closeMenu();
-              router.push('/settings');
             }}
           />
-        </View>
+          <MenuItem
+            label="Dark"
+            icon={Moon}
+            selected={preference === "dark"}
+            onPress={() => {
+              setPreference("dark");
+              closeMenu();
+            }}
+          />
+          <MenuItem
+            label="System"
+            icon={Monitor}
+            selected={preference === "system"}
+            onPress={() => {
+              setPreference("system");
+              closeMenu();
+            }}
+          />
+        </MenuGroup>
 
-        {isAuthenticated ? (
-          <View className="mt-2">
-            <Button
-              title="Logout"
-              variant="danger"
-              onPress={() => {
-                closeMenu();
-                setShowLogoutConfirm(true);
-              }}
-            />
-          </View>
-        ) : (
-          <View className="mt-2">
-            <Button
-              title="Login"
-              onPress={() => {
-                closeMenu();
-                router.push('/auth/login');
-              }}
-            />
-          </View>
-        )}
-      </ModalCard>
+        <MenuDivider />
 
-      <ModalCard visible={showLogoutConfirm} onClose={() => setShowLogoutConfirm(false)} anchor="center">
+        <MenuGroup>
+          {isAuthenticated ? (
+            <MenuItem
+              label="Logout"
+              icon={LogOut}
+              destructive
+              onPress={() =>
+                closeAndRun(() => {
+                  setShowLogoutConfirm(true);
+                })
+              }
+            />
+          ) : (
+            <MenuItem
+              label="Login"
+              icon={LogIn}
+              onPress={() =>
+                closeAndRun(() => {
+                  router.push("/auth/login");
+                })
+              }
+            />
+          )}
+        </MenuGroup>
+      </DropdownMenu>
+
+      <ModalCard
+        visible={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        anchor="center"
+      >
         <Text className={text.cardTitle}>Confirm logout</Text>
-        <Text className={`${layout.stack} ${text.caption}`}>Are you sure you want to logout?</Text>
+        <Text className={`${layout.stack} ${text.caption}`}>
+          Are you sure you want to logout?
+        </Text>
 
         <View className="mt-4 flex-row gap-2">
           <View className="flex-1">
-            <Button title="Cancel" variant="ghost" onPress={() => setShowLogoutConfirm(false)} />
+            <Button
+              title="Cancel"
+              variant="ghost"
+              onPress={() => setShowLogoutConfirm(false)}
+            />
           </View>
           <View className="flex-1">
             <Button

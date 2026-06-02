@@ -2,36 +2,36 @@
  * @file ProfileHubHeader.tsx
  * Top bar: notification / app menu action only (no duplicate branding).
  */
-import { Pressable, View } from 'react-native';
-import { Bell } from 'lucide-react-native';
+import { Pressable, View } from "react-native";
+import { Bell } from "lucide-react-native";
 
-import { useTheme } from '@/hooks/useTheme';
-import { spacing } from '@/theme/spacing';
+import { useOpenProfileMenu } from "@/hooks/useOpenProfileMenu";
+import { useTheme } from "@/hooks/useTheme";
+import { spacing } from "@/theme/spacing";
 
-type ProfileHubHeaderProps = {
-  onOpenMenu: () => void;
-};
-
-export function ProfileHubHeader({ onOpenMenu }: ProfileHubHeaderProps) {
+export function ProfileHubHeader() {
   const { colors } = useTheme();
+  const { triggerRef, openMenu } = useOpenProfileMenu();
 
   return (
     <View
       style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "flex-end",
         marginBottom: spacing[4],
       }}
     >
       <Pressable
-        onPress={onOpenMenu}
+        ref={triggerRef}
+        collapsable={false}
+        onPress={openMenu}
         hitSlop={12}
         style={{
           width: 40,
           height: 40,
-          alignItems: 'center',
-          justifyContent: 'center',
+          alignItems: "center",
+          justifyContent: "center",
         }}
         accessibilityRole="button"
         accessibilityLabel="Open app menu"

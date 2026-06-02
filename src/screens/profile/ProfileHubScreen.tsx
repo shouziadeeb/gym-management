@@ -4,7 +4,7 @@
  */
 import { router } from "expo-router";
 import { View } from "react-native";
-import { MapPin, Phone, User as UserIcon } from "lucide-react-native";
+import { MapPin, Mail, Phone, User as UserIcon } from "lucide-react-native";
 
 import { AppOptionsMenu } from "@/components/layout/AppOptionsMenu";
 import { BecomeGymOwnerCard } from "@/components/profile/BecomeGymOwnerCard";
@@ -15,15 +15,16 @@ import { ProfileHubHeader } from "@/components/profile/ProfileHubHeader";
 import { Screen } from "@/components/ui/Screen";
 import { OwnerGymProfileCard } from "@/features/profile";
 import {
+  isEmailAuthUser,
   isProfileComplete,
   resolveDisplayName,
   resolveProfileAddress,
+  resolveProfileEmail,
 } from "@/domain/profiles";
 import { useMyProfile } from "@/hooks/useMyProfile";
 import { useUserGyms } from "@/hooks/useUserGyms";
 import { useAppStore } from "@/store/app.store";
 import { useAuthStore } from "@/store/auth.store";
-import { useProfileMenuStore } from "@/store/profile-menu.store";
 
 export function ProfileHubScreen() {
   const session = useAuthStore((state) => state.session);
@@ -32,14 +33,15 @@ export function ProfileHubScreen() {
   const setActiveOwnerGymId = useAppStore((state) => state.setActiveOwnerGymId);
   const myProfileQuery = useMyProfile();
   const { ownedGyms } = useUserGyms();
-  const openMenu = useProfileMenuStore((state) => state.open);
 
   const isAuthenticated = Boolean(session);
   const profile = myProfileQuery.data;
+  const isEmailUser = isEmailAuthUser(profile, session?.user ?? null);
+  const resolvedEmail = resolveProfileEmail(profile, session?.user ?? null);
   const resolvedPhone = profile?.phone ?? session?.user.phone ?? null;
   const resolvedName = resolveDisplayName(
     profile?.full_name,
-    resolvedPhone,
+    isEmailUser ? resolvedEmail : resolvedPhone,
     session?.user.id ?? null,
   );
   const profileComplete = isProfileComplete(profile);
@@ -54,27 +56,45 @@ export function ProfileHubScreen() {
     session?.user.id?.charAt(0) ??
     "U";
 
-  const accountRows = [
-    {
-      icon: Phone,
-      label: "Phone",
-      value: resolvedPhone ?? "Not available",
-    },
-    {
-      icon: UserIcon,
-      label: "Gender",
-      value: profile?.gender ?? "Not set",
-    },
-    {
-      icon: MapPin,
-      label: "Address",
-      value: profileAddress ?? "Not set",
-    },
-  ];
+  const accountRows = isEmailUser
+    ? [
+        {
+          icon: Mail,
+          label: "Email",
+          value: resolvedEmail ?? "Not available",
+        },
+        {
+          icon: UserIcon,
+          label: "Gender",
+          value: profile?.gender ?? "Not set",
+        },
+        {
+          icon: MapPin,
+          label: "Address",
+          value: profileAddress ?? "Not set",
+        },
+      ]
+    : [
+        {
+          icon: Phone,
+          label: "Phone",
+          value: resolvedPhone ?? "Not available",
+        },
+        {
+          icon: UserIcon,
+          label: "Gender",
+          value: profile?.gender ?? "Not set",
+        },
+        {
+          icon: MapPin,
+          label: "Address",
+          value: profileAddress ?? "Not set",
+        },
+      ];
 
   return (
     <Screen scroll>
-      <ProfileHubHeader onOpenMenu={openMenu} />
+      <ProfileHubHeader />
 
       {!isAuthenticated ? (
         <>
@@ -96,11 +116,14 @@ export function ProfileHubScreen() {
           <ProfileAccountCard
             rows={accountRows}
             profileComplete={profileComplete}
-            onOpenMenu={openMenu}
             onCompleteProfile={
               !profileComplete
                 ? () =>
-                    router.push("/profile-setup?redirect=/(tabs)/profile-hub")
+                    router.push(
+                      isEmailUser
+                        ? "/profile"
+                        : "/profile-setup?redirect=/(tabs)/profile-hub",
+                    )
                 : undefined
             }
           />

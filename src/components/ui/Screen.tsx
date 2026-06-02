@@ -26,7 +26,8 @@ type Props = {
 
 function resolveSafeAreaEdges(omitTopSafeArea: boolean, inTabs: boolean): Edge[] {
   if (inTabs) {
-    return isWeb ? ['top'] : ['top', 'left', 'right'];
+    // Tab scroll content applies top padding explicitly (edge-to-edge Android).
+    return isWeb ? ['top', 'left', 'right'] : ['left', 'right'];
   }
 
   if (omitTopSafeArea) {
@@ -48,13 +49,14 @@ export function Screen({
   const segments = useSegments();
   const { colors } = useTheme();
   const omitTopSafeArea = omitTopSafeAreaProp ?? shouldOmitTopSafeAreaForRoute(segments);
-  const { bottomInset, contentTopGap, inTabs } = useScreenContentInsets({ omitTopSafeArea });
+  const { bottomInset, contentTopGap, tabTopPadding, inTabs } = useScreenContentInsets({ omitTopSafeArea });
   const backgroundColor = transparentBackground ? 'transparent' : colors.background;
   const horizontalPadding = screenLayout.screenPaddingX;
   const safeEdges = resolveSafeAreaEdges(omitTopSafeArea, inTabs);
+  const scrollTopPadding = inTabs && !isWeb ? tabTopPadding : contentTopGap;
 
   const scrollContentStyle: ViewStyle = {
-    paddingTop: contentTopGap,
+    paddingTop: scrollTopPadding,
     paddingBottom: bottomInset,
     flexGrow: 1,
     ...(isWeb ? webFullWidthStyle : null),
