@@ -1,5 +1,5 @@
-import { ProtectedRoute, routes } from '@/routing';
-import { UserProfileScreen } from '@/screens/profile/UserProfileScreen';
+import { ProtectedRoute, routes } from "@/routing";
+import { UserProfileScreen } from "@/screens/profile/UserProfileScreen";
 
 export default function ProfileRoute() {
   return (
