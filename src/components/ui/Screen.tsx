@@ -1,7 +1,7 @@
 import { useSegments } from 'expo-router';
 import { ReactNode } from 'react';
 import { RefreshControl, ScrollView, View, type ViewStyle } from 'react-native';
-import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useScreenContentInsets } from '@/hooks/useScreenContentInsets';
 import { useTheme } from '@/hooks/useTheme';
@@ -24,19 +24,6 @@ type Props = {
   transparentBackground?: boolean;
 };
 
-function resolveSafeAreaEdges(omitTopSafeArea: boolean, inTabs: boolean): Edge[] {
-  if (inTabs) {
-    // Tab scroll content applies top padding explicitly (edge-to-edge Android).
-    return isWeb ? ['top', 'left', 'right'] : ['left', 'right'];
-  }
-
-  if (omitTopSafeArea) {
-    return isWeb ? ['bottom', 'left', 'right'] : ['bottom', 'left', 'right'];
-  }
-
-  return isWeb ? ['top', 'bottom'] : ['top', 'bottom', 'left', 'right'];
-}
-
 export function Screen({
   children,
   scroll,
@@ -49,26 +36,31 @@ export function Screen({
   const segments = useSegments();
   const { colors } = useTheme();
   const omitTopSafeArea = omitTopSafeAreaProp ?? shouldOmitTopSafeAreaForRoute(segments);
-  const { bottomInset, contentTopGap, tabTopPadding, inTabs } = useScreenContentInsets({ omitTopSafeArea });
+  const { topInset, bottomInset, contentTopGap } = useScreenContentInsets({ omitTopSafeArea });
   const backgroundColor = transparentBackground ? 'transparent' : colors.background;
   const horizontalPadding = screenLayout.screenPaddingX;
-  const safeEdges = resolveSafeAreaEdges(omitTopSafeArea, inTabs);
-  const scrollTopPadding = inTabs && !isWeb ? tabTopPadding : contentTopGap;
+  const horizontalEdges = isWeb ? ([] as const) : (['left', 'right'] as const);
 
-  const scrollContentStyle: ViewStyle = {
-    paddingTop: scrollTopPadding,
-    paddingBottom: bottomInset,
-    flexGrow: 1,
-    ...(isWeb ? webFullWidthStyle : null),
+  const shellStyle: ViewStyle = {
+    flex: 1,
+    backgroundColor,
+    paddingTop: topInset,
+    ...webFullWidthStyle,
   };
 
   const paddedContentStyle: ViewStyle = {
     flex: 1,
     paddingHorizontal: horizontalPadding,
-    paddingTop: scroll ? 0 : contentTopGap,
+    paddingTop: contentTopGap,
     paddingBottom: scroll ? 0 : bottomInset,
     backgroundColor,
     ...webFullWidthStyle,
+  };
+
+  const scrollContentStyle: ViewStyle = {
+    paddingBottom: bottomInset,
+    flexGrow: 1,
+    ...(isWeb ? webFullWidthStyle : null),
   };
 
   const inner = scroll ? (
@@ -94,10 +86,7 @@ export function Screen({
   );
 
   return (
-    <SafeAreaView
-      style={[{ flex: 1, backgroundColor }, webFullWidthStyle]}
-      edges={safeEdges}
-    >
+    <SafeAreaView style={shellStyle} edges={horizontalEdges}>
       {inner}
     </SafeAreaView>
   );

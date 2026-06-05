@@ -37,6 +37,9 @@ export const queryKeys = {
     signals: (userId?: string) => ['discovery', 'signals', userId] as const,
     preferences: (userId?: string) => ['discovery', 'preferences', userId] as const,
   },
+  gymFollows: {
+    byUser: (userId?: string) => ['gymFollows', 'user', userId] as const,
+  },
   attendance: {
     settings: (gymId?: string) => ['attendance', 'settings', gymId] as const,
     today: (gymId?: string, date?: string) => ['attendance', 'today', gymId, date ?? 'today'] as const,

@@ -1,10 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Text, View } from 'react-native';
 
 import { fetchGymById } from '@/api/gyms.api';
 import { getAllGymImageUrls } from '@/api/gym-images.api';
 import { queryKeys } from '@/api/queries/keys';
+import { GymFollowButton } from '@/components/discovery/GymFollowButton';
+import { GymStatsRow } from '@/components/discovery/GymStatsRow';
 import { ImageCarousel } from '@/components/gym/ImageCarousel';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
@@ -35,6 +37,18 @@ export function GymDetailScreen({ gymId }: Props) {
       await queryClient.invalidateQueries({ queryKey: ['discovery', 'personalization-bundle'] });
     })();
   }, [gymQuery.data?.id, queryClient]);
+
+  const stats = useMemo(() => {
+    const gym = gymQuery.data;
+    if (!gym) {
+      return { followerCount: 0, activeMemberCount: 0 };
+    }
+
+    return {
+      followerCount: typeof gym.follower_count === 'number' ? gym.follower_count : 0,
+      activeMemberCount: typeof gym.active_member_count === 'number' ? gym.active_member_count : 0,
+    };
+  }, [gymQuery.data]);
 
   if (!gymId) {
     return (
@@ -67,6 +81,10 @@ export function GymDetailScreen({ gymId }: Props) {
   const membershipPlans = settings.membershipPlans;
   const owner = settings.ownerProfile;
   const allImageUrls = getAllGymImageUrls(gym);
+  const ratingLabel =
+    typeof gym.rating_avg === 'number' && gym.rating_avg > 0
+      ? `${gym.rating_avg.toFixed(1)} ★`
+      : 'New on GYM';
 
   return (
     <Screen scroll omitTopSafeArea>
@@ -77,7 +95,16 @@ export function GymDetailScreen({ gymId }: Props) {
       )}
 
       <Text className={text.screenTitle}>{gym.name}</Text>
+      <Text className={`${layout.stackSm} ${text.bodySm}`}>{ratingLabel}</Text>
       <Text className={`${layout.stack} ${text.caption}`}>{gym.description ?? 'No description available yet.'}</Text>
+
+      <View className={layout.section}>
+        <GymStatsRow
+          followerCount={stats.followerCount}
+          activeMemberCount={stats.activeMemberCount}
+        />
+        <GymFollowButton gymId={gym.id} />
+      </View>
 
       <Card title="Overview">
         <Text className={text.bodySm}>Gym Type: {settings.gymType ?? 'Not provided'}</Text>
@@ -122,4 +149,3 @@ function parseGymSettings(raw: unknown): GymSettings {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
   return raw as GymSettings;
 }
-

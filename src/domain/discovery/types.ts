@@ -14,6 +14,7 @@ export type DiscoveryGym = Gym & {
   rating_avg?: number | null;
   review_count?: number | null;
   active_member_count?: number | null;
+  follower_count?: number | null;
   popularity_score?: number | null;
   trending_score?: number | null;
   categories?: string[] | null;
@@ -33,6 +34,7 @@ export type GymCardPresentation = {
   ratingAvg: number;
   reviewCount: number;
   activeMemberCount: number;
+  followerCount: number;
   monthlyFeeCents: number | null;
   monthlyFeeLabel: string;
   latitude: number | null;

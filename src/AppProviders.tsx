@@ -1,7 +1,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
 import { ReactNode, useEffect } from 'react';
-import { View } from 'react-native';
+import { Platform, StatusBar as RNStatusBar, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StyleSheet, colorScheme as nativewindColorScheme } from 'nativewind';
@@ -10,6 +10,8 @@ import { queryClient } from '@/api/queries/client';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { useRegisterPush } from '@/hooks/useRegisterPush';
 import { useTheme } from '@/hooks/useTheme';
+import { GymFollowProvider } from '@/features/gym-follows/GymFollowProvider';
+import { I18nProvider } from '@/i18n/I18nProvider';
 import { webFullWidthStyle } from '@/lib/web-layout';
 
 function PushBootstrap() {
@@ -30,15 +32,29 @@ export function AppProviders({ children }: { children: ReactNode }) {
     nativewindColorScheme.set(colorScheme);
   }, [colorScheme]);
 
+  useEffect(() => {
+    if (Platform.OS !== 'android') {
+      return;
+    }
+
+    RNStatusBar.setTranslucent(true);
+    RNStatusBar.setBackgroundColor('transparent');
+    RNStatusBar.setBarStyle(isDark ? 'light-content' : 'dark-content');
+  }, [isDark]);
+
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background, ...webFullWidthStyle }}>
       <SafeAreaProvider style={{ flex: 1, ...webFullWidthStyle }}>
         <View style={{ flex: 1, backgroundColor: colors.background, ...webFullWidthStyle }}>
           <QueryClientProvider client={queryClient}>
             <ErrorBoundary>
-              <PushBootstrap />
-              <StatusBar style={isDark ? 'light' : 'dark'} />
-              {children}
+              <I18nProvider>
+                <GymFollowProvider>
+                  <PushBootstrap />
+                  <StatusBar style={isDark ? 'light' : 'dark'} />
+                  {children}
+                </GymFollowProvider>
+              </I18nProvider>
             </ErrorBoundary>
           </QueryClientProvider>
         </View>

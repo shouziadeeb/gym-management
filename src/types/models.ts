@@ -55,6 +55,7 @@ export type Gym = {
   rating_avg?: number | null;
   review_count?: number | null;
   active_member_count?: number | null;
+  follower_count?: number | null;
   popularity_score?: number | null;
   trending_score?: number | null;
   categories?: string[] | null;

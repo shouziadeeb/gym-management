@@ -2,11 +2,11 @@ import { useSegments } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
+  screenContentTopGap,
   screenScrollBottomPadding,
   screenTopPadding,
   shouldOmitTopSafeAreaForRoute,
   stackContentTopGap,
-  tabScrollTopPadding,
 } from '@/lib/safe-area';
 
 type Options = {
@@ -28,14 +28,12 @@ export function useScreenContentInsets(options?: Options) {
 
   const topInset = screenTopPadding(insets, omitTopSafeArea);
   const bottomInset = screenScrollBottomPadding(insets, inTabs);
-  const contentTopGap = omitTopSafeArea ? stackContentTopGap : 0;
-  const tabTopPadding = inTabs ? tabScrollTopPadding(insets) : 0;
+  const contentTopGap = omitTopSafeArea ? stackContentTopGap : screenContentTopGap;
 
   return {
     topInset,
     bottomInset,
     contentTopGap,
-    tabTopPadding,
     omitTopSafeArea,
     insets,
     inTabs,

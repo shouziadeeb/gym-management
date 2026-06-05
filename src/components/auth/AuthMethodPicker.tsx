@@ -4,6 +4,7 @@
  */
 import { Mail, Smartphone } from 'lucide-react-native';
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
 import { GoogleMark } from '@/components/auth/GoogleMark';
@@ -91,10 +92,12 @@ function AuthMethodButton({
 
 /** Horizontal rule with centered "or" between stacked auth method buttons. */
 function AuthOrDivider() {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.dividerRow} accessibilityRole="none">
       <View style={styles.dividerLine} />
-      <Text style={styles.dividerText}>or</Text>
+      <Text style={styles.dividerText}>{t('auth.or')}</Text>
       <View style={styles.dividerLine} />
     </View>
   );
@@ -112,15 +115,14 @@ export function AuthMethodPicker({
   googleLoading = false,
 }: AuthMethodPickerProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.root}>
-      <Text style={[styles.sectionLabel, { color: colors.muted }]}>
-        CHOOSE HOW YOU WANT TO CONTINUE
-      </Text>
+      <Text style={[styles.sectionLabel, { color: colors.muted }]}>{t('auth.chooseHow')}</Text>
 
       <AuthMethodButton
-        label="Continue with Phone"
+        label={t('auth.continuePhone')}
         variant="primary"
         icon={<Smartphone size={20} color="#ffffff" strokeWidth={2} />}
         onPress={() => onSelect('phone')}
@@ -130,24 +132,21 @@ export function AuthMethodPicker({
       <AuthOrDivider />
 
       <AuthMethodButton
-        label="Continue with Email"
+        label={t('auth.continueEmail')}
         icon={<Mail size={20} color={colors.foreground} strokeWidth={2} />}
         onPress={() => onSelect('email')}
         containerStyle={styles.afterDivider}
       />
 
       <AuthMethodButton
-        label="Continue with Google"
+        label={t('auth.continueGoogle')}
         icon={<GoogleMark size={20} />}
         onPress={onGooglePress}
         loading={googleLoading}
         disabled={googleLoading}
       />
 
-      <Text style={[styles.disclaimer, { color: colors.muted }]}>
-        Phone accounts receive an SMS code. Email accounts receive a one-time code in their inbox.
-        Google uses your Google account securely via Supabase.
-      </Text>
+      <Text style={[styles.disclaimer, { color: colors.muted }]}>{t('auth.disclaimer')}</Text>
     </View>
   );
 }
@@ -158,11 +157,13 @@ type AuthMethodSwitchProps = {
 };
 
 export function AuthMethodSwitch({ current, onSwitch }: AuthMethodSwitchProps) {
+  const { t } = useTranslation();
   const other: AuthMethod = current === 'phone' ? 'email' : 'phone';
+
   return (
     <Pressable onPress={() => onSwitch(other)} className={layout.stack}>
       <Text className={`text-center ${text.link}`}>
-        Use {other === 'phone' ? 'phone' : 'email'} instead
+        {t('auth.useOtherInstead', { method: t(other === 'phone' ? 'auth.phone' : 'auth.email') })}
       </Text>
     </Pressable>
   );

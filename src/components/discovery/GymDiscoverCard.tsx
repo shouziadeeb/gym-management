@@ -1,6 +1,8 @@
 import { memo, useMemo } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { GymFollowButton } from '@/components/discovery/GymFollowButton';
+import { GymStatsRow } from '@/components/discovery/GymStatsRow';
 import { ImageCarousel } from '@/components/gym/ImageCarousel';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import type { GymCardPresentation } from '@/domain/discovery/types';
@@ -26,13 +28,11 @@ export const GymDiscoverCard = memo(function GymDiscoverCard({
   const imageHeight = variant === 'rail' ? 132 : 156;
   const cardWidth = variant === 'rail' ? (railWidth ?? 280) : undefined;
 
-  const footerMeta = useMemo(() => {
-    const reviews = `${gym.reviewCount} review${gym.reviewCount === 1 ? '' : 's'}`;
-    const members = `${gym.activeMemberCount.toLocaleString()} active members`;
-    return `${reviews} • ${members}`;
-  }, [gym.activeMemberCount, gym.reviewCount]);
-
   const ratingLabel = gym.ratingAvg > 0 ? `${gym.ratingAvg.toFixed(1)} ★` : 'New on GYM';
+  const reviewLabel = useMemo(
+    () => `${gym.reviewCount} review${gym.reviewCount === 1 ? '' : 's'}`,
+    [gym.reviewCount],
+  );
 
   const visibleCategories = gym.categories.slice(0, 3);
   const imageUrls = gym.imageUrls.length > 0 ? gym.imageUrls : gym.imageUrl ? [gym.imageUrl] : [];
@@ -103,7 +103,12 @@ export const GymDiscoverCard = memo(function GymDiscoverCard({
           ) : null}
         </View>
 
-        <Text style={[styles.bodySm, { color: colors.foreground }]}>{footerMeta}</Text>
+        <Text style={[styles.bodySm, { color: colors.muted }]}>{reviewLabel}</Text>
+
+        <GymStatsRow
+          followerCount={gym.followerCount}
+          activeMemberCount={gym.activeMemberCount}
+        />
 
         <Text style={[styles.bodySm, { color: colors.foreground }]}>
           {`From ${gym.monthlyFeeLabel ?? '—'}`}
@@ -122,6 +127,10 @@ export const GymDiscoverCard = memo(function GymDiscoverCard({
           </View>
         ) : null}
       </Pressable>
+
+      <View style={styles.followRow}>
+        <GymFollowButton gymId={gym.id} />
+      </View>
     </View>
   );
 });
@@ -191,5 +200,9 @@ const styles = StyleSheet.create({
   },
   tagText: {
     fontSize: 14,
+  },
+  followRow: {
+    marginTop: spacing[1],
+    marginBottom: spacing[1],
   },
 });

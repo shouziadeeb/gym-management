@@ -56,6 +56,8 @@ export function toGymCardPresentation(gym: DiscoveryGym, imageUrls: readonly str
   const reviewCount = typeof gym.review_count === 'number' && Number.isFinite(gym.review_count) ? gym.review_count : 0;
   const activeMemberCount =
     typeof gym.active_member_count === 'number' && Number.isFinite(gym.active_member_count) ? gym.active_member_count : 0;
+  const followerCount =
+    typeof gym.follower_count === 'number' && Number.isFinite(gym.follower_count) ? gym.follower_count : 0;
   const popularityScore =
     typeof gym.popularity_score === 'number' && Number.isFinite(gym.popularity_score) ? gym.popularity_score : 0;
 
@@ -75,6 +77,7 @@ export function toGymCardPresentation(gym: DiscoveryGym, imageUrls: readonly str
     ratingAvg,
     reviewCount,
     activeMemberCount,
+    followerCount,
     monthlyFeeCents,
     monthlyFeeLabel: monthlyFeeCents !== null ? formatInrFromCents(monthlyFeeCents) : formatInrFromCents(undefined),
     latitude: lat,

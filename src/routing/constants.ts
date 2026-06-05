@@ -20,6 +20,7 @@ export const routes = {
   attendanceOwnerHistory: '/attendance-owner-history',
   attendanceAnalytics: '/attendance-analytics',
   bookings: '/bookings',
+  settings: '/settings',
   gymDetail: (id: string) => `/gym/${id}` as const,
 } as const;
 

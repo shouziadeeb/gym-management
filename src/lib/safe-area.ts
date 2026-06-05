@@ -41,15 +41,13 @@ export function screenScrollBottomPadding(insets: EdgeInsets, inTabs: boolean): 
   return screenLayout.screenPaddingBottom + systemBottomInset(insets);
 }
 
-/** Top inset when Screen applies its own status-bar padding (tab routes). */
+/** Top inset for screen shells — uses status-bar height when safe-area reports 0 (Android edge-to-edge). */
 export function screenTopPadding(insets: EdgeInsets, omitTopSafeArea: boolean): number {
-  return omitTopSafeArea ? 0 : insets.top;
+  return omitTopSafeArea ? 0 : effectiveTopInset(insets);
 }
 
-/** Top padding for tab scroll content (Android edge-to-edge may not inset SafeAreaView children). */
-export function tabScrollTopPadding(insets: EdgeInsets): number {
-  return effectiveTopInset(insets) + spacing[2];
-}
+/** Breathing room between the status-bar inset and screen content. */
+export const screenContentTopGap = spacing[2];
 
 /** Small gap below the global back row on stack screens. */
 export const stackContentTopGap = spacing[2];

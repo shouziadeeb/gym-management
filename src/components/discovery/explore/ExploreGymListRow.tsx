@@ -1,6 +1,8 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
 
+import { GymFollowButton } from '@/components/discovery/GymFollowButton';
+import { GymStatsRow } from '@/components/discovery/GymStatsRow';
 import type { GymCardPresentation } from '@/domain/discovery/types';
 import { useTheme } from '@/hooks/useTheme';
 import { spacing } from '@/theme/spacing';
@@ -22,46 +24,60 @@ export function ExploreGymListRow({ gym, priceHint, onPress }: Props) {
   const rating = gym.ratingAvg > 0 ? `${gym.ratingAvg.toFixed(1)} ★` : 'New';
 
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`Open ${gym.name}`}
-      style={[styles.row, { borderColor: colors.border, backgroundColor: colors.card }]}
-    >
-      {imageUri ? (
-        <Image source={{ uri: imageUri }} style={styles.thumb} resizeMode="cover" />
-      ) : (
-        <View style={[styles.thumb, { backgroundColor: colors.chipInactive }]} />
-      )}
+    <View style={[styles.row, { borderColor: colors.border, backgroundColor: colors.card }]}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`Open ${gym.name}`}
+        style={styles.mainPressable}
+      >
+        {imageUri ? (
+          <Image source={{ uri: imageUri }} style={styles.thumb} resizeMode="cover" />
+        ) : (
+          <View style={[styles.thumb, { backgroundColor: colors.chipInactive }]} />
+        )}
 
-      <View style={styles.content}>
-        <View style={styles.topLine}>
-          <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
-            {gym.name}
+        <View style={styles.content}>
+          <View style={styles.topLine}>
+            <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
+              {gym.name}
+            </Text>
+            <Text style={[styles.rating, { color: colors.primary }]}>{rating}</Text>
+          </View>
+          <Text style={[styles.subtitle, { color: colors.muted }]} numberOfLines={1}>
+            {formatSubtitle(gym)}
           </Text>
-          <Text style={[styles.rating, { color: colors.primary }]}>{rating}</Text>
+          <GymStatsRow
+            followerCount={gym.followerCount}
+            activeMemberCount={gym.activeMemberCount}
+            compact
+          />
+          {priceHint ? (
+            <Text style={[styles.priceHint, { color: colors.primary }]}>{priceHint}</Text>
+          ) : null}
         </View>
-        <Text style={[styles.subtitle, { color: colors.muted }]} numberOfLines={1}>
-          {formatSubtitle(gym)}
-        </Text>
-        {priceHint ? (
-          <Text style={[styles.priceHint, { color: colors.primary }]}>{priceHint}</Text>
-        ) : null}
-      </View>
 
-      <View style={[styles.chevron, { borderColor: colors.border }]}>
-        <ChevronRight size={18} color={colors.foreground} strokeWidth={2} />
+        <View style={[styles.chevron, { borderColor: colors.border }]}>
+          <ChevronRight size={18} color={colors.foreground} strokeWidth={2} />
+        </View>
+      </Pressable>
+
+      <View style={styles.followSlot}>
+        <GymFollowButton gymId={gym.id} compact />
       </View>
-    </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
     borderRadius: 16,
     borderWidth: 1,
+    overflow: 'hidden',
+  },
+  mainPressable: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: spacing[3],
     gap: spacing[3],
   },
@@ -105,5 +121,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  followSlot: {
+    paddingHorizontal: spacing[3],
+    paddingBottom: spacing[3],
   },
 });

@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Text, View } from "react-native";
 import {
   LogIn,
@@ -23,6 +24,7 @@ import { layout, text } from "@/theme/classes";
 
 /** Theme, settings, and auth actions — available to guests and signed-in users. */
 export function AppOptionsMenu() {
+  const { t } = useTranslation();
   const { preference, setPreference } = useTheme();
   const session = useAuthStore((state) => state.session);
   const resetGymContext = useAppStore((state) => state.resetGymContext);
@@ -54,7 +56,7 @@ export function AppOptionsMenu() {
       >
         <MenuGroup>
           <MenuItem
-            label="Settings"
+            label={t("menu.settings")}
             icon={Settings}
             onPress={() =>
               closeAndRun(() => {
@@ -68,7 +70,7 @@ export function AppOptionsMenu() {
 
         <MenuGroup>
           <MenuItem
-            label="Light"
+            label={t("menu.light")}
             icon={Sun}
             selected={preference === "light"}
             onPress={() => {
@@ -77,7 +79,7 @@ export function AppOptionsMenu() {
             }}
           />
           <MenuItem
-            label="Dark"
+            label={t("menu.dark")}
             icon={Moon}
             selected={preference === "dark"}
             onPress={() => {
@@ -86,7 +88,7 @@ export function AppOptionsMenu() {
             }}
           />
           <MenuItem
-            label="System"
+            label={t("menu.system")}
             icon={Monitor}
             selected={preference === "system"}
             onPress={() => {
@@ -101,7 +103,7 @@ export function AppOptionsMenu() {
         <MenuGroup>
           {isAuthenticated ? (
             <MenuItem
-              label="Logout"
+              label={t("menu.logout")}
               icon={LogOut}
               destructive
               onPress={() =>
@@ -112,7 +114,7 @@ export function AppOptionsMenu() {
             />
           ) : (
             <MenuItem
-              label="Login"
+              label={t("menu.login")}
               icon={LogIn}
               onPress={() =>
                 closeAndRun(() => {
@@ -129,22 +131,20 @@ export function AppOptionsMenu() {
         onClose={() => setShowLogoutConfirm(false)}
         anchor="center"
       >
-        <Text className={text.cardTitle}>Confirm logout</Text>
-        <Text className={`${layout.stack} ${text.caption}`}>
-          Are you sure you want to logout?
-        </Text>
+        <Text className={text.cardTitle}>{t("menu.confirmLogout")}</Text>
+        <Text className={`${layout.stack} ${text.caption}`}>{t("menu.confirmLogoutMessage")}</Text>
 
         <View className="mt-4 flex-row gap-2">
           <View className="flex-1">
             <Button
-              title="Cancel"
+              title={t("common.cancel")}
               variant="ghost"
               onPress={() => setShowLogoutConfirm(false)}
             />
           </View>
           <View className="flex-1">
             <Button
-              title="Yes, Logout"
+              title={t("menu.yesLogout")}
               variant="danger"
               onPress={async () => {
                 setShowLogoutConfirm(false);

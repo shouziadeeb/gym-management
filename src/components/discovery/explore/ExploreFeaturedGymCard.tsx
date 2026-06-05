@@ -1,5 +1,7 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { GymFollowButton } from '@/components/discovery/GymFollowButton';
+import { GymStatsRow } from '@/components/discovery/GymStatsRow';
 import type { GymCardPresentation } from '@/domain/discovery/types';
 import { useTheme } from '@/hooks/useTheme';
 import { spacing } from '@/theme/spacing';
@@ -21,54 +23,65 @@ export function ExploreFeaturedGymCard({ gym, onPress }: Props) {
   const tags = gym.categories.slice(0, 2).map((tag) => tag.toUpperCase());
 
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`Featured gym ${gym.name}`}
-      style={[styles.card, { borderColor: colors.border, backgroundColor: colors.card }]}
-    >
-      <View style={styles.imageWrap}>
-        {imageUri ? (
-          <Image source={{ uri: imageUri }} style={styles.image} resizeMode="cover" />
-        ) : (
-          <View style={[styles.image, { backgroundColor: colors.chipInactive }]} />
-        )}
-        <View style={[styles.featuredBadge, { backgroundColor: colors.primary }]}>
-          <Text style={[styles.featuredText, { color: colors.primaryForeground }]}>FEATURED</Text>
-        </View>
-      </View>
-
-      <View style={styles.body}>
-        <View style={styles.titleRow}>
-          <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>
-            {gym.name}
-          </Text>
-          {rating ? (
-            <Text style={[styles.rating, { color: colors.foreground }]}>
-              {rating} <Text style={{ color: colors.primary }}>★</Text>
-            </Text>
-          ) : null}
-        </View>
-
-        <Text style={[styles.meta, { color: colors.muted }]} numberOfLines={1}>
-          {formatLocationLine(gym)}
-        </Text>
-
-        <View style={styles.footer}>
-          <View style={styles.tagRow}>
-            {tags.map((tag) => (
-              <View key={tag} style={[styles.tag, { backgroundColor: colors.chipInactive }]}>
-                <Text style={[styles.tagText, { color: colors.muted }]}>{tag}</Text>
-              </View>
-            ))}
+    <View style={[styles.card, { borderColor: colors.border, backgroundColor: colors.card }]}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`Featured gym ${gym.name}`}
+      >
+        <View style={styles.imageWrap}>
+          {imageUri ? (
+            <Image source={{ uri: imageUri }} style={styles.image} resizeMode="cover" />
+          ) : (
+            <View style={[styles.image, { backgroundColor: colors.chipInactive }]} />
+          )}
+          <View style={[styles.featuredBadge, { backgroundColor: colors.primary }]}>
+            <Text style={[styles.featuredText, { color: colors.primaryForeground }]}>FEATURED</Text>
           </View>
-          <Text style={[styles.price, { color: colors.primary }]}>
-            {gym.monthlyFeeLabel}
-            <Text style={[styles.priceSuffix, { color: colors.muted }]}>/mo</Text>
-          </Text>
         </View>
+
+        <View style={styles.body}>
+          <View style={styles.titleRow}>
+            <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>
+              {gym.name}
+            </Text>
+            {rating ? (
+              <Text style={[styles.rating, { color: colors.foreground }]}>
+                {rating} <Text style={{ color: colors.primary }}>★</Text>
+              </Text>
+            ) : null}
+          </View>
+
+          <Text style={[styles.meta, { color: colors.muted }]} numberOfLines={1}>
+            {formatLocationLine(gym)}
+          </Text>
+
+          <GymStatsRow
+            followerCount={gym.followerCount}
+            activeMemberCount={gym.activeMemberCount}
+            compact
+          />
+
+          <View style={styles.footer}>
+            <View style={styles.tagRow}>
+              {tags.map((tag) => (
+                <View key={tag} style={[styles.tag, { backgroundColor: colors.chipInactive }]}>
+                  <Text style={[styles.tagText, { color: colors.muted }]}>{tag}</Text>
+                </View>
+              ))}
+            </View>
+            <Text style={[styles.price, { color: colors.primary }]}>
+              {gym.monthlyFeeLabel}
+              <Text style={[styles.priceSuffix, { color: colors.muted }]}>/mo</Text>
+            </Text>
+          </View>
+        </View>
+      </Pressable>
+
+      <View style={styles.followSlot}>
+        <GymFollowButton gymId={gym.id} compact />
       </View>
-    </Pressable>
+    </View>
   );
 }
 
@@ -149,5 +162,9 @@ const styles = StyleSheet.create({
   priceSuffix: {
     fontSize: 12,
     fontWeight: '500',
+  },
+  followSlot: {
+    paddingHorizontal: spacing[4],
+    paddingBottom: spacing[4],
   },
 });

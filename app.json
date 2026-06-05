@@ -65,7 +65,8 @@
         }
       ],
       "expo-router",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-localization"
     ],
     "extra": {
       "router": {},
