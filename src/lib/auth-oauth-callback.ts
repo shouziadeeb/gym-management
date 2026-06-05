@@ -1,17 +1,13 @@
 import type { Session } from '@supabase/supabase-js';
-import { router } from 'expo-router';
 import { Platform } from 'react-native';
 
-import { ensureProfileForUser } from '@/api/profiles.api';
 import { AUTH_STORAGE_KEY } from '@/lib/auth-storage';
-import { cleanOAuthCallbackUrl, clearLegacyWebAuthStorage } from '@/lib/auth-oauth-cleanup';
-import { authNavigate } from '@/lib/auth-navigate';
+import { finishOAuthFlow } from '@/lib/oauth-finish';
 import { isOAuthCallbackPath } from '@/lib/is-oauth-callback-path';
 import { logger } from '@/lib/logger';
 import { logOAuthDebug, snapshotOAuthStorage } from '@/lib/oauth-debug';
 import { parseOAuthCallbackUrl } from '@/lib/oauth-callback-url';
 import { completeOAuthSessionFromUrl } from '@/lib/oauth-exchange';
-import { consumeOAuthPending, type OAuthPending } from '@/lib/oauth-pending';
 import { supabase } from '@/lib/supabase';
 
 function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
@@ -61,63 +57,6 @@ async function recoverSessionFromStorage(): Promise<Session | null> {
   return data.session ?? persisted;
 }
 
-function resolveOAuthDestination(pending: OAuthPending | null): string {
-  const fallbackRedirect = '/profile-hub';
-
-  if (!pending) {
-    return fallbackRedirect;
-  }
-
-  const targetRedirect =
-    typeof pending.redirect === 'string' && pending.redirect.length > 0
-      ? pending.redirect
-      : '/';
-
-  if (pending.mode === 'signup') {
-    return `/profile-setup?redirect=${encodeURIComponent(targetRedirect)}`;
-  }
-
-  if (targetRedirect === '/') {
-    return fallbackRedirect;
-  }
-
-  return targetRedirect;
-}
-
-function navigateAfterOAuth(destination: string): void {
-  if (Platform.OS === 'web') {
-    authNavigate(destination);
-    return;
-  }
-
-  router.replace(destination as never);
-}
-
-async function finishOAuthSession(session: Session): Promise<boolean> {
-  try {
-    if (session.user) {
-      await withTimeout(ensureProfileForUser(session.user), 8000, undefined);
-    }
-  } catch (error) {
-    logger.warn('auth.oauth.ensure_profile_failed', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-
-  const pending = await consumeOAuthPending();
-
-  if (Platform.OS === 'web') {
-    cleanOAuthCallbackUrl();
-    clearLegacyWebAuthStorage();
-  }
-
-  const destination = resolveOAuthDestination(pending);
-  logOAuthDebug('callback.navigate', { destination, userId: session.user?.id ?? null });
-  logger.info('auth.oauth.complete', { destination, userId: session.user?.id ?? null });
-  navigateAfterOAuth(destination);
-  return true;
-}
-
 /** Single-flight guard for callback completion (web + native). */
 let oauthCallbackCompletion: Promise<boolean> | null = null;
 
@@ -150,7 +89,7 @@ async function exchangeAndFinish(authCode: string | null, callbackUrl?: string):
     return false;
   }
 
-  return finishOAuthSession(session);
+  return finishOAuthFlow(session);
 }
 
 async function runWebOAuthCallback(): Promise<boolean> {
@@ -185,7 +124,7 @@ function firstParam(value?: string | string[]): string | undefined {
   return value;
 }
 
-/** Handles Expo Go / native deep link: exp://…/--/auth/callback?code=… */
+/** Handles native deep link: gymapp://auth/callback?code=… or exp://…/--/auth/callback */
 async function runNativeOAuthCallback(params: NativeOAuthCallbackParams): Promise<boolean> {
   const code = firstParam(params.code);
   const oauthError = firstParam(params.error_description) ?? firstParam(params.error);
@@ -200,13 +139,12 @@ async function runNativeOAuthCallback(params: NativeOAuthCallbackParams): Promis
     throw new Error(oauthError);
   }
 
-  // WebBrowser may have already exchanged — treat existing session as success.
   const existing = await recoverSessionFromStorage();
   if (existing) {
     logOAuthDebug('callback.native.session_already_exists', {
       userId: existing.user?.id ?? null,
     });
-    return finishOAuthSession(existing);
+    return finishOAuthFlow(existing);
   }
 
   return exchangeAndFinish(code ?? null);

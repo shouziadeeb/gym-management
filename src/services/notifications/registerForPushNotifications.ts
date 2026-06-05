@@ -6,9 +6,13 @@ import { EXPO_PUSH_CHANNEL } from '@/constants/notifications';
 
 export type PushRegistrationResult =
   | { granted: true; token: string }
-  | { granted: false; reason: 'simulator' | 'denied' | 'error' };
+  | { granted: false; reason: 'simulator' | 'denied' | 'error' | 'unsupported' };
 
 export async function registerForPushNotifications(): Promise<PushRegistrationResult> {
+  if (Platform.OS === 'web') {
+    return { granted: false, reason: 'unsupported' };
+  }
+
   if (!Device.isDevice) {
     return { granted: false, reason: 'simulator' };
   }

@@ -65,7 +65,10 @@ export default function RootLayout() {
   const initialized = useAuthStore((state) => state.initialized);
   const isOnboardingFlow =
     segments[0] === "auth" || segments[0] === "profile-setup";
-  const showAppShell = initialized || isOAuthCallbackPath();
+  const isOAuthCallbackRoute =
+    segments[0] === "auth" && segments[1] === "callback";
+  const showAppShell =
+    initialized || isOAuthCallbackPath() || isOAuthCallbackRoute;
 
   return (
     <AppProviders>

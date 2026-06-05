@@ -1,5 +1,15 @@
-import { Redirect } from "expo-router";
+import { router } from 'expo-router';
+import { useEffect } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 
 export default function RootIndexRoute() {
-  return <Redirect href="/(tabs)" />;
+  useEffect(() => {
+    router.replace('/(tabs)' as never);
+  }, []);
+
+  return (
+    <View className="flex-1 items-center justify-center">
+      <ActivityIndicator accessibilityLabel="Loading" />
+    </View>
+  );
 }

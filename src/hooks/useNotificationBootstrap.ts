@@ -13,12 +13,14 @@ import { useAuthStore } from '@/store/auth.store';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/api/queries/keys';
 
+const isNativePushSupported = Platform.OS === 'ios' || Platform.OS === 'android';
+
 export function useNotificationBootstrap() {
   const userId = useAuthStore((state) => state.session?.user.id);
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !isNativePushSupported) return;
 
     void (async () => {
       const result = await registerForPushNotifications();
@@ -29,7 +31,7 @@ export function useNotificationBootstrap() {
   }, [userId]);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !isNativePushSupported) return;
 
     const invalidate = () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.root(userId) });

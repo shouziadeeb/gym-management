@@ -46,17 +46,11 @@ export default function AuthCallbackRoute() {
             : await completeNativeOAuthCallback(params);
 
         if (!handled) {
-          // Last chance: session may have been saved by WebBrowser before this screen mounted.
           const { data } = await supabase.auth.getSession();
           if (data.session) {
             logOAuthDebug('callback.route.late_session_recovery', {
               userId: data.session.user?.id ?? null,
             });
-            const retry =
-              Platform.OS === 'web'
-                ? await completeWebOAuthCallbackIfNeeded()
-                : await completeNativeOAuthCallback(params);
-            if (retry) return;
           }
 
           setError('Sign-in could not be completed. Please try again.');
@@ -67,6 +61,7 @@ export default function AuthCallbackRoute() {
           logOAuthDebug('callback.route.error_but_logged_in', {
             userId: data.session.user?.id ?? null,
           });
+          // finishOAuthFlow is single-flight — a concurrent WebBrowser completion may have navigated already.
           const recovered =
             Platform.OS === 'web'
               ? await completeWebOAuthCallbackIfNeeded()
