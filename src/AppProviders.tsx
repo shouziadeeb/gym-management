@@ -8,14 +8,14 @@ import { StyleSheet, colorScheme as nativewindColorScheme } from 'nativewind';
 
 import { queryClient } from '@/api/queries/client';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
-import { useRegisterPush } from '@/hooks/useRegisterPush';
+import { useNotificationBootstrap } from '@/hooks/useNotificationBootstrap';
 import { useTheme } from '@/hooks/useTheme';
 import { GymFollowProvider } from '@/features/gym-follows/GymFollowProvider';
 import { I18nProvider } from '@/i18n/I18nProvider';
 import { webFullWidthStyle } from '@/lib/web-layout';
 
-function PushBootstrap() {
-  useRegisterPush();
+function NotificationBootstrap() {
+  useNotificationBootstrap();
   return null;
 }
 
@@ -50,7 +50,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
             <ErrorBoundary>
               <I18nProvider>
                 <GymFollowProvider>
-                  <PushBootstrap />
+                  <NotificationBootstrap />
                   <StatusBar style={isDark ? 'light' : 'dark'} />
                   {children}
                 </GymFollowProvider>

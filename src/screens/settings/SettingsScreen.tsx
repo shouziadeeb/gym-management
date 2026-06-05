@@ -259,6 +259,12 @@ export function SettingsScreen() {
         >
           <SettingGroup>
             <SettingItem
+              label="Notification center"
+              subtitle="View all alerts and updates"
+              icon={Bell}
+              onPress={() => router.push('/notifications' as never)}
+            />
+            <SettingItem
               label={t('settings.notifications.push')}
               subtitle={t('settings.notifications.pushSubtitle')}
               icon={Bell}

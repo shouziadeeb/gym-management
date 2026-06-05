@@ -11,3 +11,4 @@ export * from '@/api/owner-members.api';
 export * from '@/api/payments.api';
 export * from '@/api/profiles.api';
 export * from '@/api/push.api';
+export * from '@/api/notifications.api';

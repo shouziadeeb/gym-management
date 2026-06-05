@@ -1,0 +1,78 @@
+import { useState } from 'react';
+import { FlatList, Text, View } from 'react-native';
+
+import { NotificationFilterChips } from '@/components/notifications/NotificationFilterChips';
+import { NotificationListItem } from '@/components/notifications/NotificationListItem';
+import { Button } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { Screen } from '@/components/ui/Screen';
+import type { NotificationFilterCategory } from '@/domain/notifications/types';
+import { useNotifications } from '@/hooks/useNotifications';
+import { layout, text } from '@/theme/classes';
+
+export function NotificationCenterScreen() {
+  const [filter, setFilter] = useState<NotificationFilterCategory>('all');
+  const { items, loading, error, refetch, markRead, markAllRead, markingAllRead } =
+    useNotifications(filter);
+
+  if (loading) {
+    return <LoadingScreen label="Loading notifications…" />;
+  }
+
+  if (error) {
+    return (
+      <Screen>
+        <EmptyState
+          title="Could not load notifications"
+          description={error instanceof Error ? error.message : 'Try again.'}
+          actionLabel="Retry"
+          onAction={() => void refetch()}
+        />
+      </Screen>
+    );
+  }
+
+  return (
+    <Screen className="flex-1">
+      <View className={layout.screenTop}>
+        <Text className={text.screenTitle}>Notifications</Text>
+        <Text className={`${layout.stack} ${text.caption}`}>
+          Membership, payments, attendance, and gym updates.
+        </Text>
+      </View>
+
+      <NotificationFilterChips value={filter} onChange={setFilter} />
+
+      <View className={layout.stack}>
+        <Button
+          title={markingAllRead ? 'Marking…' : 'Mark all as read'}
+          variant="ghost"
+          onPress={() => markAllRead()}
+          disabled={markingAllRead || items.every((item) => item.isRead)}
+        />
+      </View>
+
+      <FlatList
+        style={{ flex: 1 }}
+        data={items}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <NotificationListItem
+            notification={item}
+            onPress={() => {
+              if (!item.isRead) markRead(item.id);
+            }}
+          />
+        )}
+        ListEmptyComponent={
+          <EmptyState
+            title="No notifications yet"
+            description="Alerts for membership, payments, and gym activity will appear here."
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      />
+    </Screen>
+  );
+}

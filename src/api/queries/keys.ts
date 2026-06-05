@@ -40,6 +40,11 @@ export const queryKeys = {
   gymFollows: {
     byUser: (userId?: string) => ['gymFollows', 'user', userId] as const,
   },
+  notifications: {
+    root: (userId?: string) => ['notifications', userId] as const,
+    list: (userId?: string, filter?: string) => ['notifications', userId, 'list', filter ?? 'all'] as const,
+    unread: (userId?: string) => ['notifications', userId, 'unread'] as const,
+  },
   attendance: {
     settings: (gymId?: string) => ['attendance', 'settings', gymId] as const,
     today: (gymId?: string, date?: string) => ['attendance', 'today', gymId, date ?? 'today'] as const,

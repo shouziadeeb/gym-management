@@ -1,0 +1,5 @@
+[functions.send-push]
+verify_jwt = false
+
+[functions.notification-cron]
+verify_jwt = false

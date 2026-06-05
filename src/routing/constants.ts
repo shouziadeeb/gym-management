@@ -21,6 +21,7 @@ export const routes = {
   attendanceAnalytics: '/attendance-analytics',
   bookings: '/bookings',
   settings: '/settings',
+  notifications: '/notifications',
   gymDetail: (id: string) => `/gym/${id}` as const,
 } as const;
 
