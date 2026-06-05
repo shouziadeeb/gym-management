@@ -64,7 +64,13 @@ export function resolveRealEmail(user: Pick<User, 'email'>): string | null {
   return normalizeEmail(raw);
 }
 
-export function detectAuthMethodFromUser(user: Pick<User, 'email' | 'phone'>): AuthMethod {
+/** Infers auth method from Supabase user metadata and linked identities. */
+export function detectAuthMethodFromUser(
+  user: Pick<User, 'email' | 'phone' | 'identities'>,
+): 'phone' | 'email' | 'oauth' {
+  if (hasOAuthIdentity(user, 'google') || hasOAuthIdentity(user, 'apple')) {
+    return 'oauth';
+  }
   if (user.phone?.trim()) return 'phone';
   const email = resolveRealEmail(user);
   if (email) return 'email';
@@ -153,6 +159,24 @@ export function mapAuthErrorMessage(error: unknown, method: AuthMethod): string 
   }
   if (message.includes('invalid otp') || message.includes('invalid token')) {
     return 'Invalid code. Please try again.';
+  }
+
+  return fallback;
+}
+
+/** User-facing messages for Google OAuth failures. */
+export function mapGoogleAuthErrorMessage(error: unknown): string {
+  const fallback = error instanceof Error ? error.message : String(error ?? 'Something went wrong');
+  const message = fallback.toLowerCase();
+
+  if (message.includes('cancel')) {
+    return 'Google sign-in was cancelled';
+  }
+  if (message.includes('network') || message.includes('fetch')) {
+    return 'Network error. Check your connection and try again.';
+  }
+  if (isSignupDuplicateError({ message })) {
+    return 'This Google account is already registered. Try logging in instead.';
   }
 
   return fallback;

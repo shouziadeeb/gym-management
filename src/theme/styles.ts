@@ -75,10 +75,26 @@ export function highlightBorder(colors: ThemeColors): ViewStyle {
 }
 
 /** Frosted glass tint over onboarding background — keeps photo visible behind. */
-export function onboardingFormPanelSurface(colors: ThemeColors, isDark: boolean): ViewStyle {
+export function onboardingFormPanelSurface(
+  colors: ThemeColors,
+  isDark: boolean,
+  authCard = false,
+): ViewStyle {
   return {
-    backgroundColor: isDark ? 'rgba(13, 13, 13, 0.32)' : 'rgba(255, 255, 255, 0.22)',
-    borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.45)',
+    backgroundColor: authCard
+      ? isDark
+        ? 'rgba(8, 10, 18, 0.62)'
+        : 'rgba(255, 255, 255, 0.28)'
+      : isDark
+        ? 'rgba(13, 13, 13, 0.32)'
+        : 'rgba(255, 255, 255, 0.22)',
+    borderColor: authCard
+      ? isDark
+        ? 'rgba(255, 255, 255, 0.14)'
+        : 'rgba(255, 255, 255, 0.5)'
+      : isDark
+        ? 'rgba(255, 255, 255, 0.12)'
+        : 'rgba(255, 255, 255, 0.45)',
     borderWidth: 1,
   };
 }

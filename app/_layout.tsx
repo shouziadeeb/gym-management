@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppProviders } from "@/AppProviders";
 import { useAuthSession } from "@/hooks/useAuthSession";
 import { useTheme } from "@/hooks/useTheme";
+import { isOAuthCallbackPath } from "@/lib/is-oauth-callback-path";
 import { useAuthStore } from "@/store/auth.store";
 import { webFullWidthStyle } from "@/lib/web-layout";
 import { createNavigationTheme } from "@/theme/navigation";
@@ -64,11 +65,12 @@ export default function RootLayout() {
   const initialized = useAuthStore((state) => state.initialized);
   const isOnboardingFlow =
     segments[0] === "auth" || segments[0] === "profile-setup";
+  const showAppShell = initialized || isOAuthCallbackPath();
 
   return (
     <AppProviders>
       <ThemeProvider value={navTheme}>
-        {!initialized ? (
+        {!showAppShell ? (
           <View
             className={surfaces.loadingScreen}
             style={{ backgroundColor: colors.background }}
@@ -122,6 +124,17 @@ export default function RootLayout() {
               />
               <Stack.Screen
                 name="auth/forgot-password"
+                options={{
+                  contentStyle: {
+                    backgroundColor: "transparent",
+                    flex: 1,
+                    width: "100%",
+                    minHeight: "100%",
+                  },
+                }}
+              />
+              <Stack.Screen
+                name="auth/callback"
                 options={{
                   contentStyle: {
                     backgroundColor: "transparent",

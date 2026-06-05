@@ -4,6 +4,7 @@ import { Pressable, View } from 'react-native';
 
 import { useTheme } from '@/hooks/useTheme';
 import { routes } from '@/routing/constants';
+import { spacing } from '@/theme/spacing';
 
 export function OnboardingBackButton() {
   const { colors } = useTheme();
@@ -19,8 +20,9 @@ export function OnboardingBackButton() {
   return (
     <View
       style={{
-        paddingHorizontal: 12,
-        paddingBottom: 8,
+        paddingTop: spacing[3],
+        paddingHorizontal: spacing[4],
+        paddingBottom: spacing[2],
         backgroundColor: 'transparent',
       }}
     >

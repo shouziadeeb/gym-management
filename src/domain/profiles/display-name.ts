@@ -38,7 +38,12 @@ export function isProfileComplete(profile: Profile | null | undefined): boolean 
   if (!profile) return false;
   if (!profile.onboarding_completed || !profile.full_name?.trim()) return false;
 
-  const isEmailUser = profile.auth_type === 'email' || profile.auth_provider === 'email';
+  const isEmailUser =
+    profile.auth_type === 'email' ||
+    profile.auth_provider === 'email' ||
+    profile.auth_type === 'oauth' ||
+    profile.auth_provider === 'google' ||
+    profile.auth_provider === 'apple';
   if (isEmailUser) {
     return Boolean(profile.email?.trim());
   }

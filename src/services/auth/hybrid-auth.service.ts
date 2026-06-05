@@ -14,13 +14,15 @@ import {
   resendSignupConfirmation,
 } from '@/services/auth/providers/email.provider';
 import { sendPhoneOtp, verifyPhoneOtp } from '@/services/auth/providers/phone.provider';
+import { signInWithGoogle } from '@/services/auth/providers/google.provider';
 
-/** Unified facade for phone + email authentication flows. */
+/** Unified facade for phone + email + Google authentication flows. */
 export const hybridAuth = {
   sendPhoneOtp,
   verifyPhoneOtp,
   sendEmailOtp: (email: string, mode?: AuthScreenMode) => sendEmailOtp(email, mode),
   verifyEmailOtp,
+  signInWithGoogle: (mode?: AuthScreenMode, redirect?: string) => signInWithGoogle(mode, redirect),
   signUpWithEmailPassword,
   signInWithEmailPassword,
   requestPasswordReset,

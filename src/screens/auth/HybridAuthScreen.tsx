@@ -4,8 +4,9 @@
  */
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { AuthBrandHeader } from '@/components/auth/AuthBrandHeader';
 import { AuthMethodPicker } from '@/components/auth/AuthMethodPicker';
 import { AuthStatusMessage } from '@/components/auth/AuthStatusMessage';
 import { EmailAuthForm } from '@/components/auth/EmailAuthForm';
@@ -15,12 +16,15 @@ import { OnboardingFormPanel } from '@/components/onboarding/OnboardingFormPanel
 import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen';
 import { APP_NAME } from '@/constants/app';
 import { useEmailAuth } from '@/hooks/useEmailAuth';
+import { useGoogleAuth } from '@/hooks/useGoogleAuth';
 import { useHybridAuth } from '@/hooks/useHybridAuth';
 import { usePhoneAuth } from '@/hooks/usePhoneAuth';
 import { isDevPhoneAuthEnabled } from '@/lib/env';
 import { logger } from '@/lib/logger';
+import { postAuthNavigate } from '@/lib/post-auth-navigate';
 import { OTP_DIGIT_COUNT } from '@/services/auth/auth.constants';
 import type { AuthScreenMode } from '@/services/auth/auth.types';
+import { spacing } from '@/theme/spacing';
 import { layout, text } from '@/theme/classes';
 
 type HybridAuthScreenProps = {
@@ -35,30 +39,16 @@ function buildAuthRoute(pathname: '/auth/login' | '/auth/signup', redirect?: str
   return query ? `${pathname}?${query}` : pathname;
 }
 
-/** After OTP success: signup → onboarding; login → redirect or home. */
-function postAuthNavigate(
-  mode: AuthScreenMode,
-  redirect?: string,
-  authMethod?: 'phone' | 'email' | null,
-) {
-  const targetRedirect = typeof redirect === 'string' && redirect.length > 0 ? redirect : '/';
-  if (mode === 'signup') {
-    if (authMethod === 'email') {
-      router.replace('/profile' as never);
-      return;
-    }
-    router.replace(`/profile-setup?redirect=${encodeURIComponent(targetRedirect)}` as never);
-  } else {
-    router.replace(targetRedirect as never);
-  }
-}
-
 /** Orchestrates phone/email hooks, wizard steps, and navigation after successful OTP verify. */
 export function HybridAuthScreen({ mode = 'login' }: HybridAuthScreenProps) {
   const { redirect, intent } = useLocalSearchParams<{ redirect?: string; intent?: string }>();
   const hybrid = useHybridAuth({ mode });
   const phoneAuth = usePhoneAuth(mode);
   const emailAuth = useEmailAuth(mode);
+  const googleAuth = useGoogleAuth(
+    mode,
+    typeof redirect === 'string' ? redirect : undefined,
+  );
 
   const [otpValue, setOtpValue] = useState('');
 
@@ -93,6 +83,15 @@ export function HybridAuthScreen({ mode = 'login' }: HybridAuthScreenProps) {
     },
     [emailAuth, hybrid],
   );
+
+  /** Opens Google OAuth — navigation happens in provider (native) or /auth/callback (web). */
+  const handleGoogleSignIn = useCallback(async () => {
+    try {
+      await googleAuth.signIn();
+    } catch {
+      // message set on hook
+    }
+  }, [googleAuth]);
 
   /** Verifies six-digit code with active provider, then routes to app or profile-setup. */
   const handleVerify = useCallback(async () => {
@@ -161,16 +160,30 @@ export function HybridAuthScreen({ mode = 'login' }: HybridAuthScreenProps) {
       ? phoneAuth.message
       : null;
 
+  const isMethodStep = hybrid.step === 'method';
+
   return (
     <OnboardingScreen scroll>
-      <OnboardingFormPanel>
-        <Text className={text.screenTitle}>{APP_NAME}</Text>
-        <Text className={`${layout.stackSm} ${text.screenTitleMd}`}>{title}</Text>
-        <Text className={`${layout.stack} ${text.screenSubtitle}`}>{subtitle}</Text>
+      <View style={styles.authShell}>
+      <View style={styles.authColumn}>
+      {isMethodStep ? <AuthBrandHeader title={title} /> : null}
 
-        <View className={layout.sectionXl}>
-          {hybrid.step === 'method' ? (
-            <AuthMethodPicker onSelect={hybrid.selectMethod} />
+      <OnboardingFormPanel spacious={isMethodStep} embedded>
+        {!isMethodStep ? (
+          <>
+            <Text className={text.screenTitle}>{APP_NAME}</Text>
+            <Text className={`${layout.stackSm} ${text.screenTitleMd}`}>{title}</Text>
+            <Text className={`${layout.stack} ${text.screenSubtitle}`}>{subtitle}</Text>
+          </>
+        ) : null}
+
+        <View className={isMethodStep ? undefined : layout.sectionXl}>
+          {isMethodStep ? (
+            <AuthMethodPicker
+              onSelect={hybrid.selectMethod}
+              onGooglePress={handleGoogleSignIn}
+              googleLoading={googleAuth.loading}
+            />
           ) : null}
 
           {hybrid.method === 'phone' && hybrid.step === 'phone' ? (
@@ -217,45 +230,88 @@ export function HybridAuthScreen({ mode = 'login' }: HybridAuthScreenProps) {
           ) : null}
         </View>
 
-        {hybrid.step === 'method' ? (
-          <View className={`${layout.section} items-center`}>
-            {mode === 'login' ? (
-              <Pressable
-                onPress={() =>
-                  router.replace(
-                    buildAuthRoute(
-                      '/auth/signup',
-                      typeof redirect === 'string' ? redirect : undefined,
-                      typeof intent === 'string' ? intent : undefined,
-                    ) as never,
-                  )
-                }
-              >
-                <Text className={text.link}>New here? Create an account</Text>
-              </Pressable>
-            ) : (
-              <Pressable
-                onPress={() =>
-                  router.replace(
-                    buildAuthRoute(
-                      '/auth/login',
-                      typeof redirect === 'string' ? redirect : undefined,
-                      typeof intent === 'string' ? intent : undefined,
-                    ) as never,
-                  )
-                }
-              >
-                <Text className={text.link}>Already registered? Login instead</Text>
-              </Pressable>
-            )}
-          </View>
+        {!isMethodStep ? (
+          <AuthStatusMessage
+            message={
+              isOtpStep && devHint ? null : activeAuth.message
+            }
+            tone="info"
+          />
         ) : null}
-
-        <AuthStatusMessage
-          message={isOtpStep && devHint ? null : activeAuth.message}
-          tone="info"
-        />
       </OnboardingFormPanel>
+
+      {isMethodStep ? (
+        <View style={styles.methodFooter}>
+          {mode === 'login' ? (
+            <Pressable
+              onPress={() =>
+                router.replace(
+                  buildAuthRoute(
+                    '/auth/signup',
+                    typeof redirect === 'string' ? redirect : undefined,
+                    typeof intent === 'string' ? intent : undefined,
+                  ) as never,
+                )
+              }
+            >
+              <Text style={styles.footerText}>
+                New here?{' '}
+                <Text className={text.linkAccent}>Create an account</Text>
+              </Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={() =>
+                router.replace(
+                  buildAuthRoute(
+                    '/auth/login',
+                    typeof redirect === 'string' ? redirect : undefined,
+                    typeof intent === 'string' ? intent : undefined,
+                  ) as never,
+                )
+              }
+            >
+              <Text style={styles.footerText}>
+                Already registered?{' '}
+                <Text className={text.linkAccent}>Login instead</Text>
+              </Text>
+            </Pressable>
+          )}
+
+          <AuthStatusMessage message={googleAuth.message} tone="info" />
+        </View>
+      ) : null}
+      </View>
+      </View>
     </OnboardingScreen>
   );
 }
+
+const AUTH_COLUMN_MAX_WIDTH = 420;
+
+const styles = StyleSheet.create({
+  authShell: {
+    flexGrow: 1,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  authColumn: {
+    width: '100%',
+    maxWidth: AUTH_COLUMN_MAX_WIDTH,
+    alignItems: 'stretch',
+    paddingHorizontal: spacing[2],
+    paddingBottom: spacing[6],
+  },
+  methodFooter: {
+    width: '100%',
+    alignItems: 'center',
+    marginTop: spacing[5],
+    gap: spacing[3],
+  },
+  footerText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.82)',
+    textAlign: 'center',
+  },
+});

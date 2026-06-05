@@ -1,7 +1,8 @@
-import { ActivityIndicator, Pressable, Text } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useTheme } from '@/hooks/useTheme';
-import { buttons } from '@/theme/classes';
+import { radius } from '@/theme/radius';
+import { spacing } from '@/theme/spacing';
 import { buttonLabelColor, buttonSurface } from '@/theme/styles';
 
 type Props = {
@@ -14,25 +15,65 @@ type Props = {
   fullWidth?: boolean;
 };
 
-export function Button({ title, onPress, variant = 'primary', disabled, loading, fullWidth = true }: Props) {
+export function Button({
+  title,
+  onPress,
+  variant = 'primary',
+  disabled,
+  loading,
+  fullWidth = true,
+}: Props) {
   const { colors } = useTheme();
-
   const spinnerColor = buttonLabelColor(colors, variant);
+  const surfaceStyle = buttonSurface(colors, variant);
 
   return (
     <Pressable
-      className={`${buttons.base} ${fullWidth ? 'w-full' : ''} ${disabled || loading ? buttons.disabled : ''}`}
-      style={[buttonSurface(colors, variant), fullWidth ? { alignSelf: 'stretch' } : { flexShrink: 0 }]}
       onPress={onPress}
       disabled={disabled || loading}
+      android_ripple={{ color: 'rgba(255, 255, 255, 0.15)' }}
+      style={({ pressed }) => [
+        fullWidth ? styles.fullWidth : styles.shrink,
+        pressed && styles.pressed,
+        (disabled || loading) && styles.disabled,
+      ]}
     >
-      {loading ? (
-        <ActivityIndicator color={spinnerColor} />
-      ) : (
-        <Text className="font-semibold" style={{ color: spinnerColor }}>
-          {title}
-        </Text>
-      )}
+      <View style={[styles.face, surfaceStyle]}>
+        {loading ? (
+          <ActivityIndicator color={spinnerColor} />
+        ) : (
+          <Text style={[styles.label, { color: spinnerColor }]}>{title}</Text>
+        )}
+      </View>
     </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  fullWidth: {
+    width: '100%',
+    alignSelf: 'stretch',
+  },
+  shrink: {
+    flexShrink: 0,
+  },
+  pressed: {
+    opacity: 0.9,
+  },
+  disabled: {
+    opacity: 0.55,
+  },
+  face: {
+    minHeight: 48,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    overflow: 'hidden',
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
