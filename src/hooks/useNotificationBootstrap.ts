@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
 import { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import {
   addNotificationReceivedListener,
   addNotificationResponseListener,
+  flushUserPushNotifications,
   getLastNotificationResponse,
   registerForPushNotifications,
   savePushToken,
@@ -12,6 +13,7 @@ import {
 import { useAuthStore } from '@/store/auth.store';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/api/queries/keys';
+import { supabase } from '@/lib/supabase';
 
 const isNativePushSupported = Platform.OS === 'ios' || Platform.OS === 'android';
 
@@ -26,6 +28,7 @@ export function useNotificationBootstrap() {
       const result = await registerForPushNotifications();
       if (result.granted) {
         await savePushToken(userId, result.token, Platform.OS);
+        await flushUserPushNotifications();
       }
     })();
   }, [userId]);
@@ -33,9 +36,39 @@ export function useNotificationBootstrap() {
   useEffect(() => {
     if (!userId || !isNativePushSupported) return;
 
+    const flushOnActive = () => {
+      if (AppState.currentState === 'active') {
+        void flushUserPushNotifications();
+      }
+    };
+
+    flushOnActive();
+    const appStateSub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void flushUserPushNotifications();
+      }
+    });
+
     const invalidate = () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.root(userId) });
     };
+
+    const channel = supabase
+      .channel(`notification-push:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${userId}`,
+        },
+        () => {
+          invalidate();
+          void flushUserPushNotifications();
+        },
+      )
+      .subscribe();
 
     const receivedSub = addNotificationReceivedListener(() => invalidate());
     const responseSub = addNotificationResponseListener((response) => {
@@ -52,6 +85,8 @@ export function useNotificationBootstrap() {
     });
 
     return () => {
+      appStateSub.remove();
+      void supabase.removeChannel(channel);
       receivedSub.remove();
       responseSub.remove();
     };

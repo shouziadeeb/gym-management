@@ -26,9 +26,22 @@ export async function sendExpoPushBatch(messages: ExpoPushMessage[]): Promise<vo
       body: JSON.stringify(chunk),
     });
 
+    const text = await response.text();
+
     if (!response.ok) {
-      const text = await response.text();
       console.error('Expo push failed', response.status, text);
+      continue;
+    }
+
+    try {
+      const payload = JSON.parse(text) as { data?: Array<{ status?: string; message?: string }> };
+      for (const ticket of payload.data ?? []) {
+        if (ticket.status === 'error') {
+          console.error('Expo push ticket error', ticket.message ?? ticket);
+        }
+      }
+    } catch {
+      // Non-JSON response — already logged on HTTP errors.
     }
   }
 }

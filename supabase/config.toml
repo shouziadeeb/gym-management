@@ -3,3 +3,6 @@ verify_jwt = false
 
 [functions.notification-cron]
 verify_jwt = false
+
+[functions.flush-user-push]
+verify_jwt = true
