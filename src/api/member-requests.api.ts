@@ -15,6 +15,16 @@ export type OwnerMemberCandidate = {
   total_count: number;
 };
 
+export type OwnerPendingInvite = {
+  id: string;
+  member_id: string;
+  member_name: string | null;
+  member_phone: string | null;
+  status: GymMemberRequestStatus;
+  plan_type: string;
+  created_at: string;
+};
+
 export type MemberIncomingRequest = {
   id: string;
   gym_id: string;
@@ -48,6 +58,32 @@ export async function fetchOwnerMemberCandidates(input: {
   const rows = (data ?? []) as OwnerMemberCandidate[];
   const total = rows[0]?.total_count ? Number(rows[0].total_count) : 0;
   return { rows, total };
+}
+
+export async function fetchOwnerPendingInvites(gymId: string): Promise<OwnerPendingInvite[]> {
+  const { data, error } = await supabase
+    .from('gym_member_requests')
+    .select(
+      'id, member_id, status, plan_type, created_at, member:profiles!member_id(full_name, phone)',
+    )
+    .eq('gym_id', gymId)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  return (data ?? []).map((row) => {
+    const member = row.member as { full_name?: string | null; phone?: string | null } | null;
+    return {
+      id: row.id as string,
+      member_id: row.member_id as string,
+      member_name: member?.full_name ?? null,
+      member_phone: member?.phone ?? null,
+      status: row.status as GymMemberRequestStatus,
+      plan_type: row.plan_type as string,
+      created_at: row.created_at as string,
+    };
+  });
 }
 
 export async function createMemberRequest(input: {

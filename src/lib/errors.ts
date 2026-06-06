@@ -14,6 +14,10 @@ export function getErrorMessage(error: unknown, authMethod: AuthMethod = 'phone'
   }
 
   if (isPostgrestError(error)) {
+    if (error.message?.includes('profiles_phone_required_for_phone_auth')) {
+      return 'Sign-in succeeded but your profile could not be saved. Update the app and try again.';
+    }
+
     switch (error.code) {
       case '23503':
         return 'Your profile is not ready yet. Please sign out and sign in again.';

@@ -1,8 +1,10 @@
-import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { Pressable, Text } from 'react-native';
 
+import { FullWidthHorizontalScroll } from '@/components/ui/FullWidthHorizontalScroll';
 import { NOTIFICATION_FILTER_OPTIONS, type NotificationFilterCategory } from '@/domain/notifications/types';
 import { useTheme } from '@/hooks/useTheme';
-import { spacing } from '@/theme/spacing';
+import { surfaces } from '@/theme/classes';
+import { chipLabelColor, chipSurface } from '@/theme/styles';
 
 type Props = {
   value: NotificationFilterCategory;
@@ -13,50 +15,25 @@ export function NotificationFilterChips({ value, onChange }: Props) {
   const { colors } = useTheme();
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.row}
-    >
+    <FullWidthHorizontalScroll gap={8}>
       {NOTIFICATION_FILTER_OPTIONS.map((option) => {
         const selected = option.id === value;
         return (
           <Pressable
             key={option.id}
+            className={surfaces.chip}
+            style={chipSurface(colors, selected)}
             onPress={() => onChange(option.id)}
-            style={[
-              styles.chip,
-              {
-                backgroundColor: selected ? colors.primary : colors.chipInactive,
-                borderColor: selected ? colors.primary : colors.border,
-              },
-            ]}
+            accessibilityRole="button"
+            accessibilityState={{ selected }}
+            accessibilityLabel={`Filter ${option.label}`}
           >
-            <Text
-              style={{
-                color: selected ? colors.primaryForeground : colors.foreground,
-                fontWeight: selected ? '700' : '500',
-                fontSize: 13,
-              }}
-            >
+            <Text className="font-semibold" style={{ color: chipLabelColor(colors, selected) }}>
               {option.label}
             </Text>
           </Pressable>
         );
       })}
-    </ScrollView>
+    </FullWidthHorizontalScroll>
   );
 }
-
-const styles = StyleSheet.create({
-  row: {
-    gap: spacing[2],
-    paddingVertical: spacing[2],
-  },
-  chip: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
-  },
-});

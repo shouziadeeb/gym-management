@@ -3,7 +3,7 @@
  * Profile CRUD and auth-field sync (email, phone, provider) after hybrid OTP sign-in.
  */
 import type { User } from '@supabase/supabase-js';
-import type { ProfileAuthSyncInput } from '@/services/auth/auth.types';
+import type { AuthMethod, AuthProvider, ProfileAuthSyncInput } from '@/services/auth/auth.types';
 import type { Profile } from '@/types/models';
 
 import { buildDefaultDisplayName } from '@/domain/profiles';
@@ -53,9 +53,41 @@ export function buildProfileAuthSync(user: User, fallbackPhone?: string | null):
   };
 }
 
+export type EnsureProfileOptions = {
+  /** Auth method used for this sign-in (overrides inference when user has multiple identities). */
+  authMethod?: AuthMethod | 'oauth';
+  authProvider?: AuthProvider;
+  fallbackPhone?: string | null;
+};
+
+function applyAuthSyncOverrides(
+  authSync: ProfileAuthSyncInput,
+  options?: EnsureProfileOptions,
+): ProfileAuthSyncInput {
+  if (!options?.authMethod && !options?.authProvider) return authSync;
+  return {
+    ...authSync,
+    ...(options.authMethod ? { auth_type: options.authMethod } : {}),
+    ...(options.authProvider ? { auth_provider: options.authProvider } : {}),
+  };
+}
+
+/** Avoids DB check failures when inference picks phone/oauth but no phone is available yet. */
+function reconcileAuthSyncForInsert(
+  authSync: ProfileAuthSyncInput,
+  phone: string | null,
+): ProfileAuthSyncInput {
+  if (authSync.auth_type === 'email' || authSync.auth_type === 'oauth') return authSync;
+  if (phone?.trim()) return authSync;
+  if (authSync.email) {
+    return { ...authSync, auth_type: 'email', auth_provider: 'email' };
+  }
+  return authSync;
+}
+
 /** Writes auth_provider, auth_type, verified flags, and metadata onto the profiles row. */
-async function syncProfileAuthFields(user: User, fallbackPhone?: string | null): Promise<void> {
-  const authSync = buildProfileAuthSync(user, fallbackPhone);
+async function syncProfileAuthFields(user: User, fallbackPhone?: string | null, options?: EnsureProfileOptions): Promise<void> {
+  const authSync = applyAuthSyncOverrides(buildProfileAuthSync(user, fallbackPhone), options);
   const patch: Record<string, unknown> = {
     auth_provider: authSync.auth_provider,
     auth_type: authSync.auth_type,
@@ -75,7 +107,7 @@ async function syncProfileAuthFields(user: User, fallbackPhone?: string | null):
  * Phone-auth users created before the DB migration may lack a profiles row.
  * gyms.owner_id FK requires profiles.id — without it PostgREST returns 409.
  */
-export async function ensureProfileForUser(user: User): Promise<void> {
+export async function ensureProfileForUser(user: User, options?: EnsureProfileOptions): Promise<void> {
   const { data: existing, error: selectError } = await supabase
     .from('profiles')
     .select('id, phone, full_name, email, auth_type')
@@ -84,8 +116,11 @@ export async function ensureProfileForUser(user: User): Promise<void> {
 
   if (selectError) throw selectError;
 
-  const phone = resolveAuthPhone(user);
-  const authSync = buildProfileAuthSync(user);
+  const phone = resolveAuthPhone(user, options?.fallbackPhone);
+  const authSync = reconcileAuthSyncForInsert(
+    applyAuthSyncOverrides(buildProfileAuthSync(user, options?.fallbackPhone), options),
+    phone,
+  );
   const fullNameFromMetadata =
     typeof user.user_metadata?.full_name === 'string' ? user.user_metadata.full_name.trim() : '';
   const generatedName = buildDefaultDisplayName(phone, user.id);
@@ -102,7 +137,7 @@ export async function ensureProfileForUser(user: User): Promise<void> {
       if (updateError) throw updateError;
     }
 
-    await syncProfileAuthFields(user, phone);
+    await syncProfileAuthFields(user, phone, options);
     return;
   }
 
@@ -126,53 +161,7 @@ export async function ensureProfileForUser(user: User): Promise<void> {
 }
 
 export async function ensureProfileForUserWithPhone(user: User, fallbackPhone?: string | null): Promise<void> {
-  const { data: existing, error: selectError } = await supabase
-    .from('profiles')
-    .select('id, phone, full_name, email, auth_type')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  if (selectError) throw selectError;
-
-  const phone = resolveAuthPhone(user, fallbackPhone);
-  const authSync = buildProfileAuthSync(user, fallbackPhone);
-  const fullNameFromMetadata =
-    typeof user.user_metadata?.full_name === 'string' ? user.user_metadata.full_name.trim() : '';
-  const generatedName = buildDefaultDisplayName(phone, user.id);
-  const fullName = fullNameFromMetadata || generatedName;
-
-  if (existing) {
-    const patch: Record<string, unknown> = {};
-    if (!existing.phone?.trim() && phone) patch.phone = phone;
-    if (!existing.full_name?.trim()) patch.full_name = fullName;
-    if (!existing.email?.trim() && authSync.email) patch.email = authSync.email;
-
-    if (Object.keys(patch).length > 0) {
-      const { error: updateError } = await supabase.from('profiles').update(patch).eq('id', user.id);
-      if (updateError) throw updateError;
-    }
-
-    await syncProfileAuthFields(user, phone);
-    return;
-  }
-
-  const { error: insertError } = await supabase.from('profiles').insert({
-    id: user.id,
-    phone,
-    full_name: fullName,
-    email: authSync.email,
-    role: 'member',
-    auth_provider: authSync.auth_provider,
-    auth_type: authSync.auth_type,
-    email_verified: authSync.email_verified,
-    phone_verified: authSync.phone_verified,
-    provider_metadata: authSync.provider_metadata,
-  });
-
-  if (insertError) {
-    if (insertError.code === '23505') return;
-    throw insertError;
-  }
+  return ensureProfileForUser(user, { fallbackPhone, authMethod: 'phone', authProvider: 'phone' });
 }
 
 export async function fetchMyProfile(userId: string): Promise<Profile | null> {

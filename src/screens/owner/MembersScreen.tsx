@@ -13,6 +13,7 @@ import { recordManualPayment } from '@/api/payments.api';
 import { queryClient } from '@/api/queries/client';
 import { queryKeys } from '@/api/queries/keys';
 import { OwnerCandidateCard } from '@/components/owner/OwnerCandidateCard';
+import { OwnerPendingInviteCard } from '@/components/owner/OwnerPendingInviteCard';
 import { OwnerDashboardStats } from '@/components/owner/OwnerDashboardStats';
 import { OwnerMemberFilters } from '@/components/owner/OwnerMemberFilters';
 import { OwnerMemberListSkeleton } from '@/components/owner/OwnerMemberListSkeleton';
@@ -24,6 +25,7 @@ import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
 import { getErrorMessage } from '@/lib/errors';
 import { useOwnerMemberCandidates } from '@/hooks/useOwnerMemberCandidates';
+import { useOwnerPendingInvites } from '@/hooks/useOwnerPendingInvites';
 import { useOwnerDashboard } from '@/hooks/useOwnerDashboard';
 import { useTheme } from '@/hooks/useTheme';
 import { useAppStore } from '@/store/app.store';
@@ -78,6 +80,7 @@ export function MembersScreen() {
     page: ownerDashboard.page,
     pageSize: 20,
   });
+  const pendingInvitesQuery = useOwnerPendingInvites(activeOwnerGymId ?? undefined);
 
   useEffect(() => {
     setOwnerView(params.view === 'add_member' ? 'add_member' : 'current_members');
@@ -104,6 +107,9 @@ export function MembersScreen() {
         ownerDashboard.page,
         20,
       ),
+    });
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.members.ownerPendingInvites(activeOwnerGymId),
     });
   }, [isFocused, activeOwnerGymId, ownerDashboard.search, ownerDashboard.status, ownerDashboard.page]);
 
@@ -135,6 +141,7 @@ export function MembersScreen() {
           20,
         ),
       }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.ownerPendingInvites(activeOwnerGymId) }),
       queryClient.invalidateQueries({ queryKey: queryKeys.memberships.byGym(activeOwnerGymId) }),
       queryClient.invalidateQueries({ queryKey: queryKeys.payments.list(activeOwnerGymId) }),
     ]);
@@ -238,7 +245,7 @@ export function MembersScreen() {
     try {
       await createMemberRequest({ gymId: activeOwnerGymId, ownerId, memberId, planType: addPlanType });
       await refreshOwnerMembersState();
-      Alert.alert('Request sent', 'Membership request has been sent to the user.');
+      Alert.alert('Invitation sent', 'The member will receive a notification to join your gym.');
     } catch (error) {
       Alert.alert('Error', getErrorMessage(error));
     }
@@ -360,6 +367,21 @@ export function MembersScreen() {
 
       {ownerView === 'add_member' ? (
         <>
+          <Card title="Pending invitations">
+            {pendingInvitesQuery.isLoading ? <Text className={text.loading}>Loading invitations…</Text> : null}
+            {pendingInvitesQuery.error ? (
+              <Text className={text.error}>Could not load pending invitations.</Text>
+            ) : null}
+            {(pendingInvitesQuery.data ?? []).map((invite) => (
+              <OwnerPendingInviteCard key={invite.id} invite={invite} />
+            ))}
+            {!pendingInvitesQuery.isLoading &&
+            !pendingInvitesQuery.error &&
+            (pendingInvitesQuery.data?.length ?? 0) === 0 ? (
+              <Text className={text.caption}>No pending invitations yet. Use Add on a user below.</Text>
+            ) : null}
+          </Card>
+
           {candidatesQuery.isLoading ? <OwnerMemberListSkeleton /> : null}
           {candidatesQuery.error ? (
             <Card>

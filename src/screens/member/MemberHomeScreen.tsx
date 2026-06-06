@@ -156,24 +156,22 @@ export function MemberHomeScreen() {
         <Text className={`${layout.section} ${text.listTitle}`}>My gym membership</Text>
       ) : null}
 
-      {!isOwnerModeUser ? (
-        <Card title="Gym Invitations">
-          {requestsQuery.isLoading ? <Text className={text.loading}>Loading invitations...</Text> : null}
-          {requestsQuery.error ? <Text className={text.error}>Could not load invitations.</Text> : null}
-          {(requestsQuery.data ?? []).map((request) => (
-            <MemberRequestCard
-              key={request.id}
-              request={request}
-              onAccept={(id) => void respond(id, 'accepted')}
-              onReject={(id) => void respond(id, 'rejected')}
-              busy={busyRequestId === request.id}
-            />
-          ))}
-          {!requestsQuery.isLoading && !requestsQuery.error && (requestsQuery.data?.length ?? 0) === 0 ? (
-            <Text className={text.caption}>No pending invitations.</Text>
-          ) : null}
-        </Card>
-      ) : null}
+      <Card title="Gym Invitations">
+        {requestsQuery.isLoading ? <Text className={text.loading}>Loading invitations...</Text> : null}
+        {requestsQuery.error ? <Text className={text.error}>Could not load invitations.</Text> : null}
+        {(requestsQuery.data ?? []).map((request) => (
+          <MemberRequestCard
+            key={request.id}
+            request={request}
+            onAccept={(id) => void respond(id, 'accepted')}
+            onReject={(id) => void respond(id, 'rejected')}
+            busy={busyRequestId === request.id}
+          />
+        ))}
+        {!requestsQuery.isLoading && !requestsQuery.error && (requestsQuery.data?.length ?? 0) === 0 ? (
+          <Text className={text.caption}>No pending invitations.</Text>
+        ) : null}
+      </Card>
 
       {membershipQuery.isLoading ? <Text className={`${layout.stackLg} ${text.loading}`}>Loading...</Text> : null}
 

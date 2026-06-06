@@ -14,8 +14,8 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH": "false",
-        "EXPO_PUBLIC_ALLOW_PROD_DEV_AUTH": "false"
+        "EXPO_PUBLIC_ENABLE_DEV_PHONE_AUTH": "true",
+        "EXPO_PUBLIC_ALLOW_PROD_DEV_AUTH": "true"
       },
       "android": {
         "buildType": "apk"

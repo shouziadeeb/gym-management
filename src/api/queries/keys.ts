@@ -20,6 +20,7 @@ export const queryKeys = {
     ownerSummary: (gymId?: string) => ['members', 'owner', 'summary', gymId] as const,
     ownerCandidates: (gymId?: string, search?: string, page?: number, pageSize?: number) =>
       ['members', 'owner', 'candidates', gymId, search ?? '', page ?? 1, pageSize ?? 20] as const,
+    ownerPendingInvites: (gymId?: string) => ['members', 'owner', 'pending-invites', gymId] as const,
     memberRequests: (memberId?: string) => ['members', 'requests', memberId] as const,
   },
   payments: {

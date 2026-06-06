@@ -82,7 +82,7 @@ export async function verifyEmailOtp(payload: VerifyEmailOtpPayload): Promise<Se
   }
 
   if (data.user) {
-    await ensureProfileForUser(data.user);
+    await ensureProfileForUser(data.user, { authMethod: 'email', authProvider: 'email' });
   }
 
   logger.info('auth.email.verifyOtp success', { userId: data.user?.id });
@@ -122,7 +122,7 @@ export async function signUpWithEmailPassword(payload: EmailPasswordSignUpPayloa
 
   const needsEmailVerification = !data.session && Boolean(data.user);
   if (data.session && data.user) {
-    await ensureProfileForUser(data.user);
+    await ensureProfileForUser(data.user, { authMethod: 'email', authProvider: 'email' });
   }
 
   return { session: data.session, needsEmailVerification };
@@ -136,7 +136,7 @@ export async function signInWithEmailPassword(payload: EmailPasswordSignInPayloa
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
   if (!data.session) throw new Error('Login succeeded but no session was returned.');
-  if (data.user) await ensureProfileForUser(data.user);
+  if (data.user) await ensureProfileForUser(data.user, { authMethod: 'email', authProvider: 'email' });
   return data.session;
 }
 

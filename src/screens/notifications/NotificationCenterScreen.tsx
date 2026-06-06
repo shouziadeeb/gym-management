@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { FlatList, Text, View } from 'react-native';
 
 import { NotificationFilterChips } from '@/components/notifications/NotificationFilterChips';
@@ -7,14 +7,49 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { Screen } from '@/components/ui/Screen';
-import type { NotificationFilterCategory } from '@/domain/notifications/types';
+import type { AppNotification, NotificationFilterCategory } from '@/domain/notifications/types';
 import { useNotifications } from '@/hooks/useNotifications';
 import { layout, text } from '@/theme/classes';
+import { spacing } from '@/theme/spacing';
 
 export function NotificationCenterScreen() {
   const [filter, setFilter] = useState<NotificationFilterCategory>('all');
   const { items, loading, error, refetch, markRead, markAllRead, markingAllRead } =
     useNotifications(filter);
+
+  const renderItem = useCallback(
+    ({ item }: { item: AppNotification }) => (
+      <NotificationListItem
+        notification={item}
+        onPress={() => {
+          if (!item.isRead) markRead(item.id);
+        }}
+      />
+    ),
+    [markRead],
+  );
+
+  const listHeader = (
+    <View>
+      <View className={layout.screenTop}>
+        <Text className={text.screenTitle}>Notifications</Text>
+        <Text className={`${layout.stack} ${text.caption}`}>
+          Membership, payments, attendance, and gym updates.
+        </Text>
+      </View>
+
+      <NotificationFilterChips value={filter} onChange={setFilter} />
+
+      <View style={{ marginTop: spacing[3], marginBottom: spacing[2] }}>
+        <Button
+          title={markingAllRead ? 'Marking…' : 'Mark all as read'}
+          variant="ghost"
+          onPress={() => markAllRead()}
+          disabled={markingAllRead || items.every((item) => item.isRead)}
+        />
+      </View>
+    </View>
+  );
 
   if (loading) {
     return <LoadingScreen label="Loading notifications…" />;
@@ -35,42 +70,19 @@ export function NotificationCenterScreen() {
 
   return (
     <Screen className="flex-1">
-      <View className={layout.screenTop}>
-        <Text className={text.screenTitle}>Notifications</Text>
-        <Text className={`${layout.stack} ${text.caption}`}>
-          Membership, payments, attendance, and gym updates.
-        </Text>
-      </View>
-
-      <NotificationFilterChips value={filter} onChange={setFilter} />
-
-      <View className={layout.stack}>
-        <Button
-          title={markingAllRead ? 'Marking…' : 'Mark all as read'}
-          variant="ghost"
-          onPress={() => markAllRead()}
-          disabled={markingAllRead || items.every((item) => item.isRead)}
-        />
-      </View>
-
       <FlatList
         style={{ flex: 1 }}
         data={items}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <NotificationListItem
-            notification={item}
-            onPress={() => {
-              if (!item.isRead) markRead(item.id);
-            }}
-          />
-        )}
+        renderItem={renderItem}
+        ListHeaderComponent={listHeader}
         ListEmptyComponent={
           <EmptyState
             title="No notifications yet"
             description="Alerts for membership, payments, and gym activity will appear here."
           />
         }
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: spacing[6] }}
         showsVerticalScrollIndicator={false}
       />
     </Screen>

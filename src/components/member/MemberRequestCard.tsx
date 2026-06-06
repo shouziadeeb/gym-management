@@ -14,8 +14,10 @@ type Props = {
 
 export function MemberRequestCard({ request, onAccept, onReject, busy }: Props) {
   return (
-    <Card title={request.gym_name ?? 'Gym Request'}>
-      <Text className={text.caption}>Status: {request.status}</Text>
+    <Card title={request.gym_name ?? 'Gym invitation'}>
+      <Text className={text.bodySm}>
+        {request.owner_name ?? 'A gym owner'} has invited you to join this gym.
+      </Text>
       <Text className={text.caption}>Owner: {request.owner_name ?? 'Gym Owner'}</Text>
       {request.owner_phone ? <Text className={text.caption}>Owner phone: {request.owner_phone}</Text> : null}
       <Text className={text.caption}>Requested: {new Date(request.created_at).toLocaleString()}</Text>

@@ -16,6 +16,7 @@ export type AppNotificationType =
   | 'announcement_offer'
   | 'announcement_holiday'
   | 'announcement_gym_update'
+  | 'member_gym_invite'
   | 'owner_new_member'
   | 'owner_membership_renewed'
   | 'owner_membership_expired'
@@ -72,6 +73,7 @@ const MEMBERSHIP_TYPES: AppNotificationType[] = [
   'membership_expiry_3d',
   'membership_expiry_1d',
   'membership_expired',
+  'member_gym_invite',
   'owner_new_member',
   'owner_membership_renewed',
   'owner_membership_expired',
