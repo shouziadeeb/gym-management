@@ -33,8 +33,14 @@ export const PHONE_OTP_LENGTH = OTP_DIGIT_COUNT;
 /** @deprecated Use `OTP_DIGIT_COUNT` */
 export const EMAIL_OTP_LENGTH = OTP_DIGIT_COUNT;
 
-/** Client-side OTP session limits (align with Supabase rate limits). */
-export const OTP_EXPIRY_SECONDS = 600;
+/** Client-side OTP session limits — keep at or below Supabase Auth OTP TTL. */
+export const OTP_EXPIRY_SECONDS_EMAIL = 600;
+
+/** SMS OTP expires quickly on Supabase (typically 60s); client timer must not outlive server. */
+export const OTP_EXPIRY_SECONDS_PHONE = 120;
+
+/** @deprecated Use OTP_EXPIRY_SECONDS_EMAIL or OTP_EXPIRY_SECONDS_PHONE */
+export const OTP_EXPIRY_SECONDS = OTP_EXPIRY_SECONDS_EMAIL;
 
 export const OTP_RESEND_COOLDOWN_SECONDS = 60;
 

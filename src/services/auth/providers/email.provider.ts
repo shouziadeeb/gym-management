@@ -81,10 +81,6 @@ export async function verifyEmailOtp(payload: VerifyEmailOtpPayload): Promise<Se
     throw lastError ?? new Error('Invalid or expired code. Request a new code and try again.');
   }
 
-  if (data.user) {
-    await ensureProfileForUser(data.user, { authMethod: 'email', authProvider: 'email' });
-  }
-
   logger.info('auth.email.verifyOtp success', { userId: data.user?.id });
   return data.session;
 }

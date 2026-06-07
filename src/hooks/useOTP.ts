@@ -11,6 +11,8 @@ import {
   formatCountdown,
   getExpiryRemainingMs,
   getResendCooldownRemainingMs,
+  isOtpServerExpired,
+  isOtpSessionExpired,
   startOtpSession,
 } from '@/services/auth/otp.service';
 
@@ -19,14 +21,15 @@ export function useOTP() {
   const [resendSecondsLeft, setResendSecondsLeft] = useState(0);
   const [expirySecondsLeft, setExpirySecondsLeft] = useState(0);
   const [canResend, setCanResend] = useState(false);
+  const [serverExpired, setServerExpired] = useState(false);
 
-  /** Refreshes resend/expiry seconds and canResend from the active in-memory OTP session. */
   const tick = useCallback(() => {
     const resendMs = getResendCooldownRemainingMs();
     const expiryMs = getExpiryRemainingMs();
     setResendSecondsLeft(Math.ceil(resendMs / 1000));
     setExpirySecondsLeft(Math.ceil(expiryMs / 1000));
     setCanResend(canResendOtp());
+    setServerExpired(isOtpServerExpired());
   }, []);
 
   useEffect(() => {
@@ -48,7 +51,10 @@ export function useOTP() {
     setResendSecondsLeft(0);
     setExpirySecondsLeft(0);
     setCanResend(false);
+    setServerExpired(false);
   }, []);
+
+  const expired = serverExpired || isOtpSessionExpired();
 
   const resendLabel =
     canResend && resendSecondsLeft === 0
@@ -60,10 +66,15 @@ export function useOTP() {
   return {
     beginSession,
     resetSession,
-    canResend: canResend && resendSecondsLeft === 0,
+    tick,
+    canResend: canResend && resendSecondsLeft === 0 && !expired,
     resendLabel,
     expirySecondsLeft,
-    expiryLabel: expirySecondsLeft > 0 ? `Code expires in ${formatCountdown(expirySecondsLeft)}` : null,
-    tick,
+    serverExpired,
+    isExpired: expired,
+    expiryLabel:
+      !expired && expirySecondsLeft > 0
+        ? `Code expires in ${formatCountdown(expirySecondsLeft)}`
+        : null,
   };
 }

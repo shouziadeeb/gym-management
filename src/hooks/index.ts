@@ -1,5 +1,5 @@
+export { useAuthContext } from '@/providers/AuthProvider';
 export { useAuth } from '@/hooks/useAuth';
-export { useAuthSession } from '@/hooks/useAuthSession';
 export { useEmailAuth } from '@/hooks/useEmailAuth';
 export { useHybridAuth } from '@/hooks/useHybridAuth';
 export { useOTP } from '@/hooks/useOTP';

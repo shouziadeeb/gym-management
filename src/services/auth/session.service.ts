@@ -6,6 +6,7 @@ import type { Session } from '@supabase/supabase-js';
 
 import { logger } from '@/lib/logger';
 import { supabase } from '@/lib/supabase';
+import { signOutGoogleNative } from '@/services/auth/google-signin.config';
 import type { AuthStateChangeCallback } from '@/services/auth/auth.types';
 
 export async function getCurrentSession(): Promise<Session | null> {
@@ -21,6 +22,7 @@ export async function refreshSession(): Promise<Session | null> {
 }
 
 export async function signOut(): Promise<void> {
+  await signOutGoogleNative();
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
   logger.info('auth.session.sign_out');

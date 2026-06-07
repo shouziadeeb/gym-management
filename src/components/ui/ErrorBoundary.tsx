@@ -2,6 +2,7 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
+import { logger } from '@/lib/logger';
 import { layout, text } from '@/theme/classes';
 
 type Props = {
@@ -23,9 +24,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    if (__DEV__) {
-      console.error('ErrorBoundary', error, info.componentStack);
-    }
+    logger.error('auth.error_boundary', {
+      message: error.message,
+      stack: error.stack,
+      componentStack: info.componentStack,
+    });
   }
 
   private handleRetry = () => {

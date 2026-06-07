@@ -135,6 +135,18 @@ export function isLoginMissingError(error: { message?: string | null }): boolean
   return LOGIN_NOT_FOUND_MESSAGES.some((needle) => message.includes(needle));
 }
 
+/** True when Supabase rejected an OTP as expired or invalid — sync client OTP UI. */
+export function isOtpRejectedError(error: unknown): boolean {
+  const message = (error instanceof Error ? error.message : String(error ?? '')).toLowerCase();
+  return (
+    message.includes('expired') ||
+    message.includes('otp_expired') ||
+    message.includes('invalid otp') ||
+    message.includes('invalid token') ||
+    message.includes('token has expired')
+  );
+}
+
 /** Converts Supabase/auth errors into short messages for phone vs email flows. */
 export function mapAuthErrorMessage(error: unknown, method: AuthMethod): string {
   const fallback = error instanceof Error ? error.message : String(error ?? 'Something went wrong');
@@ -164,13 +176,19 @@ export function mapAuthErrorMessage(error: unknown, method: AuthMethod): string 
   return fallback;
 }
 
-/** User-facing messages for Google OAuth failures. */
+/** User-facing messages for Google Sign-In failures. */
 export function mapGoogleAuthErrorMessage(error: unknown): string {
   const fallback = error instanceof Error ? error.message : String(error ?? 'Something went wrong');
   const message = fallback.toLowerCase();
 
   if (message.includes('cancel')) {
     return 'Google sign-in was cancelled';
+  }
+  if (message.includes('play services')) {
+    return 'Google Play Services is required for sign-in on this device.';
+  }
+  if (message.includes('id token') || message.includes('web client id')) {
+    return 'Google sign-in is not configured correctly. Contact support.';
   }
   if (message.includes('network') || message.includes('fetch')) {
     return 'Network error. Check your connection and try again.';

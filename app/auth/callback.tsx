@@ -8,6 +8,7 @@ import {
 } from '@/lib/auth-oauth-callback';
 import { authNavigate } from '@/lib/auth-navigate';
 import { getErrorMessage } from '@/lib/errors';
+import { finishOAuthFlow } from '@/lib/oauth-finish';
 import { useTheme } from '@/hooks/useTheme';
 import { logOAuthDebug, snapshotOAuthStorage } from '@/lib/oauth-debug';
 import { parseOAuthCallbackUrl } from '@/lib/oauth-callback-url';
@@ -51,6 +52,8 @@ export default function AuthCallbackRoute() {
             logOAuthDebug('callback.route.late_session_recovery', {
               userId: data.session.user?.id ?? null,
             });
+            await finishOAuthFlow(data.session);
+            return;
           }
 
           setError('Sign-in could not be completed. Please try again.');
@@ -61,12 +64,16 @@ export default function AuthCallbackRoute() {
           logOAuthDebug('callback.route.error_but_logged_in', {
             userId: data.session.user?.id ?? null,
           });
-          // finishOAuthFlow is single-flight — a concurrent WebBrowser completion may have navigated already.
-          const recovered =
-            Platform.OS === 'web'
-              ? await completeWebOAuthCallbackIfNeeded()
-              : await completeNativeOAuthCallback(params);
-          if (recovered) return;
+          try {
+            await finishOAuthFlow(data.session);
+            return;
+          } catch {
+            const recovered =
+              Platform.OS === 'web'
+                ? await completeWebOAuthCallbackIfNeeded()
+                : await completeNativeOAuthCallback(params);
+            if (recovered) return;
+          }
         }
 
         logOAuthDebug('callback.route.error', {

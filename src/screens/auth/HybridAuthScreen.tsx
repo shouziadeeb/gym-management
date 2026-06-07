@@ -20,6 +20,7 @@ import { useGoogleAuth } from '@/hooks/useGoogleAuth';
 import { useHybridAuth } from '@/hooks/useHybridAuth';
 import { usePhoneAuth } from '@/hooks/usePhoneAuth';
 import { isDevPhoneAuthEnabled } from '@/lib/env';
+import { getErrorMessage } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import { postAuthNavigate } from '@/lib/post-auth-navigate';
 import { OTP_DIGIT_COUNT } from '@/services/auth/auth.constants';
@@ -84,7 +85,7 @@ export function HybridAuthScreen({ mode = 'login' }: HybridAuthScreenProps) {
     [emailAuth, hybrid],
   );
 
-  /** Opens Google OAuth — navigation happens in provider (native) or /auth/callback (web). */
+  /** Opens native Google Sign-In (mobile) or OAuth redirect (web). */
   const handleGoogleSignIn = useCallback(async () => {
     try {
       await googleAuth.signIn();
@@ -96,14 +97,31 @@ export function HybridAuthScreen({ mode = 'login' }: HybridAuthScreenProps) {
   /** Verifies six-digit code with active provider, then routes to app or profile-setup. */
   const handleVerify = useCallback(async () => {
     try {
-      if (hybrid.method === 'phone') {
-        await phoneAuth.verifyCode(otpValue);
-      } else {
-        await emailAuth.verifyCode(otpValue);
-      }
-      postAuthNavigate(mode, typeof redirect === 'string' ? redirect : undefined, hybrid.method);
-    } catch {
-      // message set on hook
+      const session =
+        hybrid.method === 'phone'
+          ? await phoneAuth.verifyCode(otpValue)
+          : await emailAuth.verifyCode(otpValue);
+
+      const profileOptions =
+        hybrid.method === 'phone'
+          ? {
+              authMethod: 'phone' as const,
+              authProvider: 'phone' as const,
+              fallbackPhone: phoneAuth.identifier,
+            }
+          : { authMethod: 'email' as const, authProvider: 'email' as const };
+
+      await postAuthNavigate(
+        session,
+        mode,
+        typeof redirect === 'string' ? redirect : undefined,
+        hybrid.method,
+        profileOptions,
+      );
+    } catch (error) {
+      const msg = getErrorMessage(error, hybrid.method === 'phone' ? 'phone' : 'email');
+      if (hybrid.method === 'phone') phoneAuth.setMessage(msg);
+      else emailAuth.setMessage(msg);
     }
   }, [emailAuth, hybrid.method, mode, otpValue, phoneAuth, redirect]);
 
@@ -233,7 +251,14 @@ export function HybridAuthScreen({ mode = 'login' }: HybridAuthScreenProps) {
         {!isMethodStep ? (
           <AuthStatusMessage
             message={
-              isOtpStep && devHint ? null : activeAuth.message
+              isOtpStep
+                ? devHint
+                  ? null
+                  : activeAuth.message &&
+                      !/invalid|expired|attempt/i.test(activeAuth.message)
+                    ? activeAuth.message
+                    : null
+                : activeAuth.message
             }
             tone="info"
           />

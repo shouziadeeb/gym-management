@@ -6,14 +6,14 @@ import { useCallback, useState } from 'react';
 
 import { useOTP } from '@/hooks/useOTP';
 import { getErrorMessage } from '@/lib/errors';
-import { mapAuthErrorMessage } from '@/services/auth/auth.utils';
+import { isOtpRejectedError, mapAuthErrorMessage } from '@/services/auth/auth.utils';
 import type { AuthScreenMode } from '@/services/auth/auth.types';
 import { hybridAuth } from '@/services/auth/hybrid-auth.service';
 import {
   assertOtpSessionValid,
   clearOtpSession,
+  markOtpSessionServerExpired,
   recordVerifyAttempt,
-  startOtpSession,
 } from '@/services/auth/otp.service';
 
 /** Email OTP state machine: always real Supabase inbox codes (no dev bypass). */
@@ -23,7 +23,6 @@ export function useEmailAuth(mode: AuthScreenMode = 'login') {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  /** Triggers signInWithOtp for email and starts resend/expiry countdown. */
   const sendCode = useCallback(
     async (email: string, isResend = false) => {
       setMessage(null);
@@ -31,7 +30,6 @@ export function useEmailAuth(mode: AuthScreenMode = 'login') {
       try {
         const { email: normalized } = await hybridAuth.sendEmailOtp(email, mode);
         setIdentifier(normalized);
-        startOtpSession('email', normalized, isResend);
         otp.beginSession('email', normalized, isResend);
         setMessage(`We sent a verification code to ${normalized}. Check your inbox and spam.`);
         return normalized;
@@ -45,7 +43,6 @@ export function useEmailAuth(mode: AuthScreenMode = 'login') {
     [mode, otp],
   );
 
-  /** Validates OTP session and exchanges token for Supabase session via verifyOtp. */
   const verifyCode = useCallback(
     async (token: string) => {
       setMessage(null);
@@ -58,6 +55,10 @@ export function useEmailAuth(mode: AuthScreenMode = 'login') {
         otp.resetSession();
         return session;
       } catch (error) {
+        if (isOtpRejectedError(error)) {
+          markOtpSessionServerExpired();
+          otp.tick();
+        }
         setMessage(getErrorMessage(error, 'email'));
         throw error;
       } finally {

@@ -13,6 +13,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { GymFollowProvider } from '@/features/gym-follows/GymFollowProvider';
 import { I18nProvider } from '@/i18n/I18nProvider';
 import { webFullWidthStyle } from '@/lib/web-layout';
+import { AuthProvider } from '@/providers/AuthProvider';
 
 function NotificationBootstrap() {
   useNotificationBootstrap();
@@ -48,13 +49,15 @@ export function AppProviders({ children }: { children: ReactNode }) {
         <View style={{ flex: 1, backgroundColor: colors.background, ...webFullWidthStyle }}>
           <QueryClientProvider client={queryClient}>
             <ErrorBoundary>
-              <I18nProvider>
-                <GymFollowProvider>
-                  <NotificationBootstrap />
-                  <StatusBar style={isDark ? 'light' : 'dark'} />
-                  {children}
-                </GymFollowProvider>
-              </I18nProvider>
+              <AuthProvider>
+                <I18nProvider>
+                  <GymFollowProvider>
+                    <NotificationBootstrap />
+                    <StatusBar style={isDark ? 'light' : 'dark'} />
+                    {children}
+                  </GymFollowProvider>
+                </I18nProvider>
+              </AuthProvider>
             </ErrorBoundary>
           </QueryClientProvider>
         </View>

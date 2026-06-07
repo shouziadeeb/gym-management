@@ -3,7 +3,8 @@
  * In-memory OTP session tracking: expiry, resend cooldown, and verify attempt limits.
  */
 import {
-  OTP_EXPIRY_SECONDS,
+  OTP_EXPIRY_SECONDS_EMAIL,
+  OTP_EXPIRY_SECONDS_PHONE,
   OTP_MAX_RESEND_COUNT,
   OTP_MAX_VERIFY_ATTEMPTS,
   OTP_RESEND_COOLDOWN_SECONDS,
@@ -18,9 +19,15 @@ export type OtpSessionState = {
   resendAvailableAt: number;
   resendCount: number;
   verifyAttempts: number;
+  serverExpired: boolean;
 };
 
 let activeSession: OtpSessionState | null = null;
+
+function otpExpiryMs(method: AuthMethod): number {
+  const seconds = method === 'phone' ? OTP_EXPIRY_SECONDS_PHONE : OTP_EXPIRY_SECONDS_EMAIL;
+  return seconds * 1000;
+}
 
 /** Creates or extends in-memory OTP session with expiry and resend cooldown timestamps. */
 export function startOtpSession(method: AuthMethod, identifier: string, isResend = false): OtpSessionState {
@@ -33,10 +40,11 @@ export function startOtpSession(method: AuthMethod, identifier: string, isResend
     activeSession = {
       ...activeSession,
       sentAt: now,
-      expiresAt: now + OTP_EXPIRY_SECONDS * 1000,
+      expiresAt: now + otpExpiryMs(method),
       resendAvailableAt: now + OTP_RESEND_COOLDOWN_SECONDS * 1000,
       resendCount: activeSession.resendCount + 1,
       verifyAttempts: 0,
+      serverExpired: false,
     };
     return activeSession;
   }
@@ -45,10 +53,11 @@ export function startOtpSession(method: AuthMethod, identifier: string, isResend
     method,
     identifier,
     sentAt: now,
-    expiresAt: now + OTP_EXPIRY_SECONDS * 1000,
+    expiresAt: now + otpExpiryMs(method),
     resendAvailableAt: now + OTP_RESEND_COOLDOWN_SECONDS * 1000,
     resendCount: isResend ? 1 : 0,
     verifyAttempts: 0,
+    serverExpired: false,
   };
 
   return activeSession;
@@ -62,12 +71,22 @@ export function clearOtpSession(): void {
   activeSession = null;
 }
 
+/** Marks the active OTP session expired after Supabase rejects the code (server TTL < client timer). */
+export function markOtpSessionServerExpired(): void {
+  if (!activeSession) return;
+  activeSession = {
+    ...activeSession,
+    serverExpired: true,
+    expiresAt: Date.now(),
+  };
+}
+
 /** Throws if no active OTP session, identifier mismatch, or code expired. */
 export function assertOtpSessionValid(identifier: string, method: AuthMethod): void {
   if (!activeSession || activeSession.identifier !== identifier || activeSession.method !== method) {
     throw new Error('OTP session expired. Request a new code.');
   }
-  if (Date.now() > activeSession.expiresAt) {
+  if (activeSession.serverExpired || Date.now() > activeSession.expiresAt) {
     clearOtpSession();
     throw new Error('Code expired. Request a new code and try again.');
   }
@@ -84,17 +103,22 @@ export function recordVerifyAttempt(): number {
 }
 
 export function getResendCooldownRemainingMs(now = Date.now()): number {
-  if (!activeSession) return 0;
+  if (!activeSession || activeSession.serverExpired) return 0;
   return Math.max(0, activeSession.resendAvailableAt - now);
 }
 
 export function getExpiryRemainingMs(now = Date.now()): number {
-  if (!activeSession) return 0;
+  if (!activeSession || activeSession.serverExpired) return 0;
   return Math.max(0, activeSession.expiresAt - now);
 }
 
-export function canResendOtp(now = Date.now()): boolean {
+export function isOtpSessionExpired(now = Date.now()): boolean {
   if (!activeSession) return false;
+  return activeSession.serverExpired || now >= activeSession.expiresAt;
+}
+
+export function canResendOtp(now = Date.now()): boolean {
+  if (!activeSession || activeSession.serverExpired) return false;
   if (activeSession.resendCount >= OTP_MAX_RESEND_COUNT) return false;
   return now >= activeSession.resendAvailableAt;
 }
@@ -103,4 +127,9 @@ export function formatCountdown(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
   return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+/** True when Supabase rejected the OTP as expired/invalid — hide client countdown. */
+export function isOtpServerExpired(): boolean {
+  return activeSession?.serverExpired ?? false;
 }

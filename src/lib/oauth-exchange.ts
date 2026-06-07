@@ -1,6 +1,5 @@
 import type { Session } from '@supabase/supabase-js';
 
-import { ensureProfileForUser } from '@/api/profiles.api';
 import { extractAuthCodeFromUrl } from '@/lib/oauth-callback-url';
 import { logOAuthDebug } from '@/lib/oauth-debug';
 import { logger } from '@/lib/logger';
@@ -42,10 +41,6 @@ export async function exchangeOAuthCodeOnce(authCode: string): Promise<Session> 
 
     if (!data.session) {
       throw new Error('Sign-in succeeded but no session was returned.');
-    }
-
-    if (data.user) {
-      await ensureProfileForUser(data.user);
     }
 
     return data.session;

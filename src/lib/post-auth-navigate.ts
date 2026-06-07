@@ -1,24 +1,22 @@
-import { router } from 'expo-router';
-import { InteractionManager, Platform } from 'react-native';
+import type { Session } from '@supabase/supabase-js';
 
-import { authNavigate } from '@/lib/auth-navigate';
-import { resolvePostAuthDestination } from '@/lib/oauth-finish';
+import type { EnsureProfileOptions } from '@/api/profiles.api';
+import { completeSignIn } from '@/services/auth/complete-sign-in';
 import type { AuthScreenMode } from '@/services/auth/auth.types';
 
-/** After auth success: signup → onboarding; login → redirect or home. */
-export function postAuthNavigate(
+/** After auth success: ensure profile, sync store, warm cache, then navigate. */
+export async function postAuthNavigate(
+  session: Session,
   mode: AuthScreenMode,
   redirect?: string,
   authMethod?: 'phone' | 'email' | 'google' | null,
-) {
-  const href = resolvePostAuthDestination(mode, redirect, authMethod);
-
-  if (Platform.OS === 'web') {
-    authNavigate(href);
-    return;
-  }
-
-  InteractionManager.runAfterInteractions(() => {
-    router.replace(href as never);
+  profileOptions?: EnsureProfileOptions,
+): Promise<void> {
+  await completeSignIn({
+    session,
+    mode,
+    redirect,
+    authMethod,
+    profileOptions,
   });
 }

@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { router, useLocalSearchParams } from "expo-router";
 import { Controller, useForm } from "react-hook-form";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Text, View } from "react-native";
 
 import { updateMyProfile } from "@/api/profiles.api";
@@ -142,8 +142,13 @@ export function ProfileSetupScreen() {
     }
   });
 
+  useEffect(() => {
+    if (!session) {
+      router.replace("/auth/login");
+    }
+  }, [session]);
+
   if (!session) {
-    router.replace("/auth/login");
     return null;
   }
 

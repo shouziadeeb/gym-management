@@ -12,6 +12,12 @@ type OptionalEnv = {
   EXPO_PUBLIC_ENABLE_DEV_AUTH: string;
   EXPO_PUBLIC_ALLOW_PROD_DEV_AUTH: string;
   EXPO_PUBLIC_SUPABASE_STORAGE_BUCKET: string;
+  /** Google Cloud Web OAuth client ID — required for native Google Sign-In. */
+  EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: string;
+  /** Google Cloud iOS OAuth client ID — recommended for iOS native sign-in. */
+  EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: string;
+  /** Reversed iOS client ID URL scheme for Expo config plugin (com.googleusercontent.apps.*). */
+  EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME: string;
 };
 
 function readEnv(): RequiredEnv {
@@ -30,7 +36,23 @@ export const optionalEnv: OptionalEnv = {
   EXPO_PUBLIC_ENABLE_DEV_AUTH: process.env.EXPO_PUBLIC_ENABLE_DEV_AUTH?.trim() ?? '',
   EXPO_PUBLIC_ALLOW_PROD_DEV_AUTH: process.env.EXPO_PUBLIC_ALLOW_PROD_DEV_AUTH?.trim() ?? '',
   EXPO_PUBLIC_SUPABASE_STORAGE_BUCKET: process.env.EXPO_PUBLIC_SUPABASE_STORAGE_BUCKET?.trim() ?? '',
+  EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?.trim() ?? '',
+  EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim() ?? '',
+  EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME: process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME?.trim() ?? '',
 };
+
+/** Native Google Sign-In client IDs from environment. */
+export function getGoogleSignInEnv(): {
+  webClientId: string | null;
+  iosClientId: string | null;
+  iosUrlScheme: string | null;
+} {
+  return {
+    webClientId: optionalEnv.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || null,
+    iosClientId: optionalEnv.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || null,
+    iosUrlScheme: optionalEnv.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME || null,
+  };
+}
 
 function parseEnvBoolean(raw: string): boolean | null {
   if (!raw) return null;

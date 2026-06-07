@@ -7,10 +7,9 @@ import { ActivityIndicator, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppProviders } from "@/AppProviders";
-import { useAuthSession } from "@/hooks/useAuthSession";
 import { useTheme } from "@/hooks/useTheme";
 import { isOAuthCallbackPath } from "@/lib/is-oauth-callback-path";
-import { useAuthStore } from "@/store/auth.store";
+import { deriveAuthStatus, useAuthStore } from "@/store/auth.store";
 import { webFullWidthStyle } from "@/lib/web-layout";
 import { createNavigationTheme } from "@/theme/navigation";
 import { layout, surfaces } from "@/theme/classes";
@@ -58,22 +57,33 @@ function GlobalBackButton() {
 }
 
 export default function RootLayout() {
-  useAuthSession();
   const segments = useSegments();
   const { colors, isDark } = useTheme();
   const navTheme = createNavigationTheme(isDark);
   const initialized = useAuthStore((state) => state.initialized);
+  const phase = useAuthStore((state) => state.phase);
+  const session = useAuthStore((state) => state.session);
+  const lastError = useAuthStore((state) => state.lastError);
+  const status = deriveAuthStatus({ session, initialized, phase, lastError });
   const isOnboardingFlow =
     segments[0] === "auth" || segments[0] === "profile-setup";
   const isOAuthCallbackRoute =
-    segments[0] === "auth" && segments[1] === "callback";
+    segments[0] === "auth" && segments.at(1) === "callback";
   const showAppShell =
     initialized || isOAuthCallbackPath() || isOAuthCallbackRoute;
+  const isSigningIn = status === "loading" || status === "initializing";
 
   return (
     <AppProviders>
       <ThemeProvider value={navTheme}>
         {!showAppShell ? (
+          <View
+            className={surfaces.loadingScreen}
+            style={{ backgroundColor: colors.background }}
+          >
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : isSigningIn ? (
           <View
             className={surfaces.loadingScreen}
             style={{ backgroundColor: colors.background }}

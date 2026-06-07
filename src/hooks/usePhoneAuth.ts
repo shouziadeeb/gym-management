@@ -7,15 +7,15 @@ import { useCallback, useState } from 'react';
 import { useOTP } from '@/hooks/useOTP';
 import { isDevPhoneAuthEnabled } from '@/lib/env';
 import { getErrorMessage } from '@/lib/errors';
-import { mapAuthErrorMessage } from '@/services/auth/auth.utils';
+import { isOtpRejectedError, mapAuthErrorMessage } from '@/services/auth/auth.utils';
 import type { AuthScreenMode } from '@/services/auth/auth.types';
 import { hybridAuth } from '@/services/auth/hybrid-auth.service';
 import { getPhoneDevOtpHint } from '@/services/auth/providers/phone.provider';
 import {
   assertOtpSessionValid,
   clearOtpSession,
+  markOtpSessionServerExpired,
   recordVerifyAttempt,
-  startOtpSession,
 } from '@/services/auth/otp.service';
 import { normalizeIndianMobile10 } from '@/utils/phone';
 
@@ -26,7 +26,6 @@ export function usePhoneAuth(mode: AuthScreenMode = 'login') {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  /** Calls hybridAuth.sendPhoneOtp, starts OTP timers, shows dev hint when applicable. */
   const sendCode = useCallback(
     async (rawPhone: string, isResend = false) => {
       setMessage(null);
@@ -34,7 +33,6 @@ export function usePhoneAuth(mode: AuthScreenMode = 'login') {
       try {
         const { normalizedPhone } = await hybridAuth.sendPhoneOtp(rawPhone);
         setIdentifier(normalizedPhone);
-        startOtpSession('phone', normalizedPhone, isResend);
         otp.beginSession('phone', normalizedPhone, isResend);
 
         if (isDevPhoneAuthEnabled()) {
@@ -54,7 +52,6 @@ export function usePhoneAuth(mode: AuthScreenMode = 'login') {
     [otp],
   );
 
-  /** Validates OTP session, verifies with Supabase (or dev bridge), clears session on success. */
   const verifyCode = useCallback(
     async (token: string) => {
       setMessage(null);
@@ -67,6 +64,10 @@ export function usePhoneAuth(mode: AuthScreenMode = 'login') {
         otp.resetSession();
         return session;
       } catch (error) {
+        if (isOtpRejectedError(error)) {
+          markOtpSessionServerExpired();
+          otp.tick();
+        }
         setMessage(getErrorMessage(error, 'phone'));
         throw error;
       } finally {

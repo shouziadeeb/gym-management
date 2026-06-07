@@ -5,7 +5,6 @@
  */
 import type { Session } from '@supabase/supabase-js';
 
-import { ensureProfileForUserWithPhone } from '@/api/profiles.api';
 import { isDevPhoneAuthEnabled } from '@/lib/env';
 import { logger } from '@/lib/logger';
 import { supabase } from '@/lib/supabase';
@@ -67,10 +66,6 @@ export async function verifyPhoneOtp(payload: VerifyOtpPayload): Promise<Session
 
   if (!data.session) {
     throw new Error('Verification succeeded but no session was returned.');
-  }
-
-  if (data.user) {
-    await ensureProfileForUserWithPhone(data.user, normalizedPhone);
   }
 
   logger.info('auth.phone.verifyOtp success', { userId: data.user?.id });
