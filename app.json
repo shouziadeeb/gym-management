@@ -24,6 +24,10 @@
       },
       "package": "com.gym.saas",
       "edgeToEdgeEnabled": true,
+      "navigationBar": {
+        "backgroundColor": "#0D0D0D",
+        "barStyle": "light-content"
+      },
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",

@@ -12,6 +12,7 @@ import { useNotificationBootstrap } from '@/hooks/useNotificationBootstrap';
 import { useTheme } from '@/hooks/useTheme';
 import { GymFollowProvider } from '@/features/gym-follows/GymFollowProvider';
 import { I18nProvider } from '@/i18n/I18nProvider';
+import { applySystemChrome } from '@/lib/system-chrome';
 import { webFullWidthStyle } from '@/lib/web-layout';
 import { AuthProvider } from '@/providers/AuthProvider';
 
@@ -42,6 +43,10 @@ export function AppProviders({ children }: { children: ReactNode }) {
     RNStatusBar.setBackgroundColor('transparent');
     RNStatusBar.setBarStyle(isDark ? 'light-content' : 'dark-content');
   }, [isDark]);
+
+  useEffect(() => {
+    void applySystemChrome(colors, isDark);
+  }, [colors, isDark]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background, ...webFullWidthStyle }}>

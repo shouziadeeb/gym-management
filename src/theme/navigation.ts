@@ -1,6 +1,7 @@
 import { DarkTheme, DefaultTheme, type Theme } from '@react-navigation/native';
 import { Platform } from 'react-native';
 
+import { getBottomChromeColor } from '@/lib/system-chrome';
 import { darkColors, lightColors } from '@/theme/colors';
 import { webFullWidthStyle } from '@/lib/web-layout';
 export function createNavigationTheme(isDark: boolean): Theme {
@@ -33,9 +34,11 @@ export function createTabBarOptions(isDark: boolean) {
     headerStyle: { backgroundColor: colors.surface },
     headerTintColor: colors.foreground,
     tabBarStyle: {
-      backgroundColor: colors.surface,
+      backgroundColor: getBottomChromeColor(colors, isDark),
       borderTopColor: colors.border,
-    },    tabBarActiveTintColor: colors.tabActive,
+      elevation: 0,
+    },
+    tabBarActiveTintColor: colors.tabActive,
     tabBarInactiveTintColor: colors.tabInactive,
   };
 }
