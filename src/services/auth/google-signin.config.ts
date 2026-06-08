@@ -1,14 +1,38 @@
-import {
-  GoogleSignin,
-} from '@react-native-google-signin/google-signin';
 import { Platform } from 'react-native';
 
 import { authLog } from '@/lib/auth-log';
 import { getGoogleSignInEnv } from '@/lib/env';
+import { isNativeGoogleSignInSupported } from '@/services/auth/google-signin.availability';
+
+type GoogleSignInModule = typeof import('@react-native-google-signin/google-signin');
 
 let configured = false;
+let googleSignInModule: GoogleSignInModule | null | undefined;
 
-/** Validates and returns Google Sign-In env for native builds. */
+function loadGoogleSignInModule(): GoogleSignInModule | null {
+  if (googleSignInModule !== undefined) {
+    return googleSignInModule;
+  }
+
+  if (!isNativeGoogleSignInSupported()) {
+    googleSignInModule = null;
+    return null;
+  }
+
+  try {
+    // Lazy require — avoids TurboModule crash in Expo Go at import time.
+    googleSignInModule = require('@react-native-google-signin/google-signin') as GoogleSignInModule;
+  } catch (error) {
+    authLog.googleWarn('module.load_failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    googleSignInModule = null;
+  }
+
+  return googleSignInModule;
+}
+
+/** Validates Google Sign-In env for native dev/EAS builds. */
 export function assertGoogleSignInConfigured(): void {
   const { webClientId } = getGoogleSignInEnv();
   if (!webClientId) {
@@ -18,14 +42,19 @@ export function assertGoogleSignInConfigured(): void {
   }
 }
 
-/** One-time native Google Sign-In SDK configuration (Android + iOS). */
-export function ensureGoogleSignInConfigured(): void {
-  if (configured || Platform.OS === 'web') return;
+/** One-time native Google Sign-In SDK configuration (dev client + EAS builds only). */
+export function ensureGoogleSignInConfigured(): boolean {
+  if (configured || Platform.OS === 'web' || !isNativeGoogleSignInSupported()) {
+    return false;
+  }
+
+  const module = loadGoogleSignInModule();
+  if (!module) return false;
 
   const { webClientId, iosClientId } = getGoogleSignInEnv();
   assertGoogleSignInConfigured();
 
-  GoogleSignin.configure({
+  module.GoogleSignin.configure({
     webClientId: webClientId!,
     offlineAccess: false,
     ...(iosClientId ? { iosClientId } : {}),
@@ -36,15 +65,25 @@ export function ensureGoogleSignInConfigured(): void {
     platform: Platform.OS,
     hasIosClientId: Boolean(iosClientId),
   });
+
+  return true;
 }
 
-/** Clears Google Sign-In cached account (safe no-op when not signed in). */
+/** Returns lazily loaded Google Sign-In module, or null in Expo Go / web. */
+export function getGoogleSignInModule(): GoogleSignInModule | null {
+  return loadGoogleSignInModule();
+}
+
+/** Clears Google Sign-In cached account (safe no-op when unavailable). */
 export async function signOutGoogleNative(): Promise<void> {
-  if (Platform.OS === 'web') return;
+  if (Platform.OS === 'web' || !isNativeGoogleSignInSupported()) return;
+
+  const module = loadGoogleSignInModule();
+  if (!module) return;
 
   try {
     ensureGoogleSignInConfigured();
-    await GoogleSignin.signOut();
+    await module.GoogleSignin.signOut();
     authLog.google('sign_out.completed');
   } catch {
     // User may not have used Google — ignore.

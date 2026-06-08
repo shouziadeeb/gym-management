@@ -13,15 +13,18 @@ export const routes = {
   manageMembers: '/manage-members',
   membershipLifecycle: '/membership-lifecycle',
   analytics: '/analytics',
+  scanner: '/(tabs)/scanner',
   attendance: '/attendance',
   attendanceScan: '/attendance-scan',
   attendanceHistory: '/attendance-history',
   attendanceQr: '/attendance-qr',
   attendanceOwnerHistory: '/attendance-owner-history',
   attendanceAnalytics: '/attendance-analytics',
+  joinGym: (slug: string) => `/join/${encodeURIComponent(slug)}` as const,
   bookings: '/bookings',
   settings: '/settings',
   notifications: '/notifications',
+  joinRequestReview: (requestId: string) => `/join-request/${encodeURIComponent(requestId)}` as const,
   gymDetail: (id: string) => `/gym/${id}` as const,
 } as const;
 

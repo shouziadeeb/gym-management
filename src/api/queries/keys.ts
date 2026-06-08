@@ -46,6 +46,10 @@ export const queryKeys = {
     list: (userId?: string, filter?: string) => ['notifications', userId, 'list', filter ?? 'all'] as const,
     unread: (userId?: string) => ['notifications', userId, 'unread'] as const,
   },
+  join: {
+    status: (gymId?: string, userId?: string) => ['join', 'status', gymId, userId] as const,
+    request: (requestId?: string) => ['join', 'request', requestId] as const,
+  },
   attendance: {
     settings: (gymId?: string) => ['attendance', 'settings', gymId] as const,
     today: (gymId?: string, date?: string) => ['attendance', 'today', gymId, date ?? 'today'] as const,

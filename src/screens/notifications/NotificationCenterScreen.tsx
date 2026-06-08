@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { FlatList, Text, View } from 'react-native';
+import { router } from 'expo-router';
 
 import { NotificationFilterChips } from '@/components/notifications/NotificationFilterChips';
 import { NotificationListItem } from '@/components/notifications/NotificationListItem';
@@ -9,6 +10,7 @@ import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { Screen } from '@/components/ui/Screen';
 import type { AppNotification, NotificationFilterCategory } from '@/domain/notifications/types';
 import { useNotifications } from '@/hooks/useNotifications';
+import { resolveNotificationHref } from '@/lib/notification-navigation';
 import { layout, text } from '@/theme/classes';
 import { spacing } from '@/theme/spacing';
 
@@ -17,16 +19,20 @@ export function NotificationCenterScreen() {
   const { items, loading, error, refetch, markRead, markAllRead, markingAllRead } =
     useNotifications(filter);
 
+  const handleNotificationPress = useCallback(
+    (item: AppNotification) => {
+      if (!item.isRead) markRead(item.id);
+      const href = resolveNotificationHref(item);
+      if (href) router.push(href as never);
+    },
+    [markRead],
+  );
+
   const renderItem = useCallback(
     ({ item }: { item: AppNotification }) => (
-      <NotificationListItem
-        notification={item}
-        onPress={() => {
-          if (!item.isRead) markRead(item.id);
-        }}
-      />
+      <NotificationListItem notification={item} onPress={() => handleNotificationPress(item)} />
     ),
-    [markRead],
+    [handleNotificationPress],
   );
 
   const listHeader = (

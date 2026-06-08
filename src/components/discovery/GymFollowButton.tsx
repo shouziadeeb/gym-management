@@ -8,9 +8,11 @@ import { spacing } from '@/theme/spacing';
 type Props = {
   gymId: string;
   compact?: boolean;
+  /** Stretch to fill the parent row (e.g. beside Connect). */
+  fullWidth?: boolean;
 };
 
-export function GymFollowButton({ gymId, compact = false }: Props) {
+export function GymFollowButton({ gymId, compact = false, fullWidth = false }: Props) {
   const { colors } = useTheme();
   const { isFollowing, isPending, toggleFollow } = useGymFollow();
 
@@ -35,7 +37,11 @@ export function GymFollowButton({ gymId, compact = false }: Props) {
       disabled={loading}
       accessibilityRole="button"
       accessibilityLabel={following ? `Unfollow gym` : `Follow gym`}
-      style={({ pressed }) => [pressed && styles.pressed, compact && styles.compactSlot]}
+      style={({ pressed }) => [
+        fullWidth && styles.fullWidth,
+        pressed && styles.pressed,
+        compact && styles.compactSlot,
+      ]}
     >
       <View
         style={[
@@ -60,6 +66,9 @@ export function GymFollowButton({ gymId, compact = false }: Props) {
 }
 
 const styles = StyleSheet.create({
+  fullWidth: {
+    flex: 1,
+  },
   compactSlot: {
     alignSelf: 'flex-start',
   },

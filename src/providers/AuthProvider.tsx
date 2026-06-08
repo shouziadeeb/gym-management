@@ -17,6 +17,7 @@ import { authLog } from '@/lib/auth-log';
 import { getAuthEnvSummary } from '@/lib/env';
 import { isOAuthCallbackPath } from '@/lib/is-oauth-callback-path';
 import { ensureGoogleSignInConfigured } from '@/services/auth/google-signin.config';
+import { isNativeGoogleSignInSupported } from '@/services/auth/google-signin.availability';
 import { getCurrentSession, onAuthStateChange } from '@/services/auth/auth.service';
 import { getUserFromSession } from '@/services/auth/session.service';
 import {
@@ -66,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setPhase = useAuthStore((state) => state.setPhase);
 
   useEffect(() => {
-    if (Platform.OS !== 'web') {
+    if (Platform.OS !== 'web' && isNativeGoogleSignInSupported()) {
       try {
         ensureGoogleSignInConfigured();
       } catch (error) {

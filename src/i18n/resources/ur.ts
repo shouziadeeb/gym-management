@@ -15,6 +15,8 @@ export const ur: TranslationSchema = {
   tabs: {
     home: 'ہوم',
     explore: 'تلاش',
+    scan: 'اسکین',
+    gymQr: 'جم QR',
     memberships: 'رکنیت',
     profile: 'پروفائل',
   },

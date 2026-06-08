@@ -13,6 +13,8 @@ import {
 import { useAuthStore } from '@/store/auth.store';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/api/queries/keys';
+import { fetchNotifications } from '@/api/notifications.api';
+import { resolveNotificationHref } from '@/lib/notification-navigation';
 import { supabase } from '@/lib/supabase';
 
 const isNativePushSupported = Platform.OS === 'ios' || Platform.OS === 'android';
@@ -73,10 +75,22 @@ export function useNotificationBootstrap() {
     const receivedSub = addNotificationReceivedListener(() => invalidate());
     const responseSub = addNotificationResponseListener((response) => {
       invalidate();
-      const notificationId = response.notification.request.content.data?.notificationId;
-      if (typeof notificationId === 'string') {
-        router.push('/notifications' as never);
-      }
+      void (async () => {
+        const notificationId = response.notification.request.content.data?.notificationId;
+        if (typeof notificationId !== 'string') {
+          router.push('/notifications' as never);
+          return;
+        }
+
+        try {
+          const items = await fetchNotifications(100);
+          const match = items.find((item) => item.id === notificationId);
+          const href = match ? resolveNotificationHref(match) : null;
+          router.push((href ?? '/notifications') as never);
+        } catch {
+          router.push('/notifications' as never);
+        }
+      })();
     });
 
     void getLastNotificationResponse().then((response) => {

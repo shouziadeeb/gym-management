@@ -18,6 +18,8 @@ type OptionalEnv = {
   EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: string;
   /** Reversed iOS client ID URL scheme for Expo config plugin (com.googleusercontent.apps.*). */
   EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME: string;
+  /** Public website origin for QR codes and universal links (no trailing slash). */
+  EXPO_PUBLIC_WEB_APP_ORIGIN: string;
 };
 
 function readEnv(): RequiredEnv {
@@ -39,7 +41,42 @@ export const optionalEnv: OptionalEnv = {
   EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?.trim() ?? '',
   EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim() ?? '',
   EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME: process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME?.trim() ?? '',
+  EXPO_PUBLIC_WEB_APP_ORIGIN: process.env.EXPO_PUBLIC_WEB_APP_ORIGIN?.trim() ?? '',
 };
+
+/** Default production web app (Vercel). Override via EXPO_PUBLIC_WEB_APP_ORIGIN. */
+export const DEFAULT_WEB_APP_ORIGIN = 'https://gym-management-green.vercel.app';
+
+/** Canonical HTTPS origin for join/attendance QR URLs. */
+export function getWebAppOrigin(): string {
+  const raw = optionalEnv.EXPO_PUBLIC_WEB_APP_ORIGIN;
+  if (raw) {
+    try {
+      return new URL(raw).origin;
+    } catch {
+      return DEFAULT_WEB_APP_ORIGIN;
+    }
+  }
+  return DEFAULT_WEB_APP_ORIGIN;
+}
+
+/** Hostnames accepted when parsing HTTPS deep links (includes future gymos.app). */
+export function getTrustedWebHosts(): readonly string[] {
+  const hosts = new Set<string>([
+    'gymos.app',
+    'www.gymos.app',
+    'localhost',
+    '127.0.0.1',
+  ]);
+
+  try {
+    hosts.add(new URL(getWebAppOrigin()).hostname.toLowerCase());
+  } catch {
+    hosts.add('gym-management-green.vercel.app');
+  }
+
+  return [...hosts];
+}
 
 /** Native Google Sign-In client IDs from environment. */
 export function getGoogleSignInEnv(): {

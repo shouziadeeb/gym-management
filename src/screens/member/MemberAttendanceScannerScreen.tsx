@@ -1,4 +1,5 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useRef } from 'react';
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
@@ -13,8 +14,18 @@ import { useAppStore } from '@/store/app.store';
 import { layout, text } from '@/theme/classes';
 
 export function MemberAttendanceScannerScreen() {
+  const { token } = useLocalSearchParams<{ token?: string | string[] }>();
   const activeMemberGymId = useAppStore((state) => state.activeMemberGymId);
   const { processScan, reset, lastResult, errorMessage, isProcessing } = useAttendanceScanner(activeMemberGymId ?? undefined);
+  const autoScannedRef = useRef(false);
+
+  const tokenParam = Array.isArray(token) ? token[0] : token;
+
+  useEffect(() => {
+    if (!tokenParam || autoScannedRef.current || lastResult) return;
+    autoScannedRef.current = true;
+    void processScan(tokenParam);
+  }, [tokenParam, processScan, lastResult]);
 
   return (
     <Screen scroll>

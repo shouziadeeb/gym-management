@@ -1,17 +1,25 @@
 import { Tabs } from 'expo-router';
-import { Dumbbell, Home, Search, User } from 'lucide-react-native';
+import { Dumbbell, Home, QrCode, Search, User } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
+import { CenterTabBar } from '@/components/navigation/CenterTabBar';
 import { useTheme } from '@/hooks/useTheme';
+import { useUserGyms } from '@/hooks/useUserGyms';
 import { createTabBarOptions } from '@/theme/navigation';
 
 export default function TabsLayout() {
   const { isDark } = useTheme();
   const { t } = useTranslation();
   const tabOptions = createTabBarOptions(isDark);
+  const { ownedGyms } = useUserGyms();
+
+  const scannerLabel = ownedGyms.length > 0 ? t('tabs.gymQr') : t('tabs.scan');
 
   return (
-    <Tabs screenOptions={{ ...tabOptions, headerShown: false }}>
+    <Tabs
+      tabBar={(props) => <CenterTabBar {...props} scannerLabel={scannerLabel} />}
+      screenOptions={{ ...tabOptions, headerShown: false }}
+    >
       <Tabs.Screen
         name="index"
         options={{
@@ -24,6 +32,14 @@ export default function TabsLayout() {
         options={{
           title: t('tabs.explore'),
           tabBarIcon: ({ color, size }) => <Search size={size ?? 20} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="scanner"
+        options={{
+          title: scannerLabel,
+          tabBarLabel: scannerLabel,
+          tabBarIcon: ({ color, size }) => <QrCode size={size ?? 24} color={color} />,
         }}
       />
       <Tabs.Screen

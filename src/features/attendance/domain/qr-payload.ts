@@ -1,4 +1,5 @@
 import { ATTENDANCE_QR_VERSION, ATTENDANCE_TOKEN_PREFIX } from '@/features/attendance/constants';
+import { buildAttendanceQrUrl } from '@/lib/deep-links/urls';
 import type { AttendanceScanErrorCode } from '@/features/attendance/types';
 
 export type AttendanceQrPayload = {
@@ -6,10 +7,13 @@ export type AttendanceQrPayload = {
   t: string;
 };
 
-/** Build QR payload JSON — never includes raw gym IDs. */
-export function buildAttendanceQrPayload(token: string): string {
-  const payload: AttendanceQrPayload = { v: ATTENDANCE_QR_VERSION, t: token };
-  return JSON.stringify(payload);
+/** Build QR payload — URL form for universal links; JSON kept for backward compatibility. */
+export function buildAttendanceQrPayload(token: string, format: 'url' | 'json' = 'url'): string {
+  if (format === 'json') {
+    const payload: AttendanceQrPayload = { v: ATTENDANCE_QR_VERSION, t: token };
+    return JSON.stringify(payload);
+  }
+  return buildAttendanceQrUrl(token);
 }
 
 /** Parse scanned QR/barcode data into a secure attendance token. */
@@ -19,6 +23,24 @@ export function parseAttendanceScanPayload(raw: string): string | null {
 
   if (trimmed.startsWith(ATTENDANCE_TOKEN_PREFIX)) {
     return trimmed;
+  }
+
+  // URL form: https://gymos.app/attendance?token=gat_… or gymos://attendance?token=…
+  try {
+    const normalized = trimmed.replace(/^gymos:\/\//, 'https://').replace(/^gymapp:\/\//, 'https://');
+    if (normalized.includes('://')) {
+      const url = new URL(normalized);
+      const tokenParam = url.searchParams.get('token') ?? url.searchParams.get('t');
+      if (tokenParam?.startsWith(ATTENDANCE_TOKEN_PREFIX)) {
+        return tokenParam;
+      }
+      const pathToken = url.pathname.split('/').pop();
+      if (pathToken?.startsWith(ATTENDANCE_TOKEN_PREFIX)) {
+        return pathToken;
+      }
+    }
+  } catch {
+    // not a URL — continue
   }
 
   try {

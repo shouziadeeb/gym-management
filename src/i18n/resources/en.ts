@@ -13,6 +13,8 @@ export const en = {
   tabs: {
     home: 'Home',
     explore: 'Explore',
+    scan: 'Scan',
+    gymQr: 'Gym QR',
     memberships: 'Memberships',
     profile: 'Profile',
   },

@@ -1,32 +1,31 @@
 /**
  * @file google.provider.ts
- * Native Google Sign-In (Android/iOS) via ID token + Supabase signInWithIdToken.
- * Web continues to use Supabase OAuth redirect flow.
+ * Native Google Sign-In (dev/EAS builds) via ID token + Supabase signInWithIdToken.
+ * Expo Go + web fall back to Supabase OAuth (browser / custom tab).
  */
-import {
-  GoogleSignin,
-  isCancelledResponse,
-  isErrorWithCode,
-  isSuccessResponse,
-  statusCodes,
-} from '@react-native-google-signin/google-signin';
 import type { Session } from '@supabase/supabase-js';
+import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 
 import { authLog } from '@/lib/auth-log';
 import { getOAuthRedirectUri, logOAuthRedirectDiagnostics } from '@/lib/auth-redirect-uri';
 import { clearOAuthPendingStorage } from '@/lib/auth-oauth-cleanup';
 import { logOAuthDebug, snapshotOAuthStorage } from '@/lib/oauth-debug';
+import { completeOAuthSessionFromUrl } from '@/lib/oauth-exchange';
 import { finishOAuthFlow, resetOAuthFinishState } from '@/lib/oauth-finish';
 import { saveOAuthPending } from '@/lib/oauth-pending';
 import { postAuthNavigate } from '@/lib/post-auth-navigate';
 import { supabase } from '@/lib/supabase';
+import { isNativeGoogleSignInSupported } from '@/services/auth/google-signin.availability';
 import {
   assertGoogleSignInConfigured,
   ensureGoogleSignInConfigured,
+  getGoogleSignInModule,
 } from '@/services/auth/google-signin.config';
 import type { AuthScreenMode } from '@/services/auth/auth.types';
 import { useAuthStore } from '@/store/auth.store';
+
+WebBrowser.maybeCompleteAuthSession();
 
 function googleQueryParams(mode: AuthScreenMode) {
   return {
@@ -46,7 +45,7 @@ async function beginGoogleOAuth(mode: AuthScreenMode, redirect?: string): Promis
     provider: 'google',
     options: {
       redirectTo,
-      skipBrowserRedirect: true,
+      skipBrowserRedirect: Platform.OS !== 'web',
       queryParams: googleQueryParams(mode),
     },
   });
@@ -91,10 +90,65 @@ async function signInWithGoogleWeb(
   return new Promise<Session>(() => {});
 }
 
+/** Expo Go fallback — browser custom tab + OAuth callback (no RNGoogleSignin native module). */
+async function signInWithGoogleBrowserOAuth(
+  mode: AuthScreenMode,
+  redirect?: string,
+): Promise<Session> {
+  const redirectTo = getOAuthRedirectUri();
+  logOAuthRedirectDiagnostics('expo_go.signInWithOAuth');
+
+  const url = await beginGoogleOAuth(mode, redirect);
+
+  authLog.google('expo_go.browser_oauth.started', { mode, redirectTo });
+
+  useAuthStore.getState().setPhase('signing_in');
+
+  const result = await WebBrowser.openAuthSessionAsync(url, redirectTo, {
+    showInRecents: true,
+  });
+
+  const resetPhase = () => {
+    const { session, phase } = useAuthStore.getState();
+    if (phase === 'signing_in') {
+      useAuthStore.getState().setPhase(session ? 'ready' : 'anonymous');
+    }
+  };
+
+  if (result.type === 'cancel' || result.type === 'dismiss') {
+    resetPhase();
+    throw new Error('Google sign-in was cancelled');
+  }
+
+  if (result.type !== 'success') {
+    resetPhase();
+    throw new Error('Google sign-in failed. Please try again.');
+  }
+
+  try {
+    const session = await completeOAuthSessionFromUrl(result.url);
+    await finishOAuthFlow(session);
+    return session;
+  } catch (error) {
+    resetPhase();
+    throw error;
+  }
+}
+
 async function signInWithGoogleNativeIdToken(
   mode: AuthScreenMode,
   redirect?: string,
 ): Promise<Session> {
+  const googleSignIn = getGoogleSignInModule();
+  if (!googleSignIn) {
+    throw new Error(
+      'Native Google Sign-In is unavailable. Use an EAS development build, or continue in Expo Go with browser OAuth.',
+    );
+  }
+
+  const { GoogleSignin, isCancelledResponse, isErrorWithCode, isSuccessResponse, statusCodes } =
+    googleSignIn;
+
   assertGoogleSignInConfigured();
   ensureGoogleSignInConfigured();
 
@@ -170,7 +224,7 @@ async function signInWithGoogleNativeIdToken(
   }
 }
 
-/** Google sign-in: native account picker + ID token on mobile; OAuth redirect on web. */
+/** Google sign-in: native ID token (EAS/dev client), browser OAuth (Expo Go), redirect (web). */
 export async function signInWithGoogle(
   mode: AuthScreenMode = 'login',
   redirect?: string,
@@ -178,5 +232,10 @@ export async function signInWithGoogle(
   if (Platform.OS === 'web') {
     return signInWithGoogleWeb(mode, redirect);
   }
-  return signInWithGoogleNativeIdToken(mode, redirect);
+
+  if (isNativeGoogleSignInSupported()) {
+    return signInWithGoogleNativeIdToken(mode, redirect);
+  }
+
+  return signInWithGoogleBrowserOAuth(mode, redirect);
 }

@@ -7,6 +7,7 @@ import { ActivityIndicator, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppProviders } from "@/AppProviders";
+import { useDeepLinkHandler } from "@/hooks/useDeepLinkHandler";
 import { useTheme } from "@/hooks/useTheme";
 import { isOAuthCallbackPath } from "@/lib/is-oauth-callback-path";
 import { deriveAuthStatus, useAuthStore } from "@/store/auth.store";
@@ -57,6 +58,7 @@ function GlobalBackButton() {
 }
 
 export default function RootLayout() {
+  useDeepLinkHandler();
   const segments = useSegments();
   const { colors, isDark } = useTheme();
   const navTheme = createNavigationTheme(isDark);
@@ -178,6 +180,7 @@ export default function RootLayout() {
               <Stack.Screen name="attendance-analytics" />
               <Stack.Screen name="attendance-scan" />
               <Stack.Screen name="attendance-history" />
+              <Stack.Screen name="join/[slug]" />
               <Stack.Screen name="membership-lifecycle" />
               <Stack.Screen name="profile" />
               <Stack.Screen name="bookings" />
@@ -186,6 +189,7 @@ export default function RootLayout() {
               <Stack.Screen name="trainers" />
               <Stack.Screen name="settings" />
               <Stack.Screen name="notifications" />
+              <Stack.Screen name="join-request/[id]" />
               </Stack>
             </View>
           </View>

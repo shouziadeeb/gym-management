@@ -1,11 +1,12 @@
 import { useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { fetchGymById } from '@/api/gyms.api';
 import { getAllGymImageUrls } from '@/api/gym-images.api';
 import { queryKeys } from '@/api/queries/keys';
 import { GymFollowButton } from '@/components/discovery/GymFollowButton';
+import { GymConnectButton } from '@/components/discovery/GymConnectButton';
 import { GymStatsRow } from '@/components/discovery/GymStatsRow';
 import { ImageCarousel } from '@/components/gym/ImageCarousel';
 import { Card } from '@/components/ui/Card';
@@ -13,7 +14,9 @@ import { Screen } from '@/components/ui/Screen';
 import { layout, text } from '@/theme/classes';
 import type { GymSettings } from '@/types/models';
 import { recordGymView } from '@/services/discovery/preferences.storage';
+import { useAuthStore } from '@/store/auth.store';
 import { compactList, formatInrFromCents, formatTime12h } from '@/utils/gym-settings';
+import { spacing } from '@/theme/spacing';
 
 type Props = {
   gymId?: string;
@@ -21,6 +24,7 @@ type Props = {
 
 export function GymDetailScreen({ gymId }: Props) {
   const queryClient = useQueryClient();
+  const userId = useAuthStore((state) => state.session?.user.id);
 
   const gymQuery = useQuery({
     queryKey: queryKeys.gyms.byId(gymId),
@@ -85,6 +89,7 @@ export function GymDetailScreen({ gymId }: Props) {
     typeof gym.rating_avg === 'number' && gym.rating_avg > 0
       ? `${gym.rating_avg.toFixed(1)} ★`
       : 'New on GYM';
+  const isGymOwner = Boolean(userId && gym.owner_id === userId);
 
   return (
     <Screen scroll omitTopSafeArea>
@@ -98,15 +103,18 @@ export function GymDetailScreen({ gymId }: Props) {
       <Text className={`${layout.stackSm} ${text.bodySm}`}>{ratingLabel}</Text>
       <Text className={`${layout.stack} ${text.caption}`}>{gym.description ?? 'No description available yet.'}</Text>
 
-      <View className={layout.section}>
-        <GymStatsRow
-          followerCount={stats.followerCount}
-          activeMemberCount={stats.activeMemberCount}
-        />
-        <GymFollowButton gymId={gym.id} />
+      <GymStatsRow
+        followerCount={stats.followerCount}
+        activeMemberCount={stats.activeMemberCount}
+        compact
+      />
+
+      <View style={styles.actionRow}>
+        <GymFollowButton gymId={gym.id} fullWidth />
+        <GymConnectButton gymId={gym.id} gymName={gym.name} hidden={isGymOwner} />
       </View>
 
-      <Card title="Overview">
+      <Card title="Overview" className="mt-2">
         <Text className={text.bodySm}>Gym Type: {settings.gymType ?? 'Not provided'}</Text>
         {gym.address ? <Text className={`${layout.stackSm} ${text.bodySm}`}>Address: {gym.address}</Text> : null}
         <Text className={`${layout.stackSm} ${text.bodySm}`}>Timezone: {gym.timezone}</Text>
@@ -149,3 +157,12 @@ function parseGymSettings(raw: unknown): GymSettings {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
   return raw as GymSettings;
 }
+
+const styles = StyleSheet.create({
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: spacing[2],
+    marginTop: spacing[2],
+  },
+});

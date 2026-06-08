@@ -15,6 +15,8 @@ export const ar: TranslationSchema = {
   tabs: {
     home: 'الرئيسية',
     explore: 'استكشاف',
+    scan: 'مسح',
+    gymQr: 'رمز QR',
     memberships: 'العضويات',
     profile: 'الملف الشخصي',
   },

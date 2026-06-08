@@ -15,6 +15,8 @@ export const hi: TranslationSchema = {
   tabs: {
     home: 'होम',
     explore: 'खोजें',
+    scan: 'स्कैन',
+    gymQr: 'जिम QR',
     memberships: 'सदस्यता',
     profile: 'प्रोफ़ाइल',
   },
