@@ -36,90 +36,8 @@ create index if not exists idx_profiles_email on public.profiles (lower(email))
   where email is not null;
 
 -- -----------------------------------------------------------------------------
--- Backfill from auth.users (non-destructive)
--- -----------------------------------------------------------------------------
-with auth_snapshot as (
-  select
-    au.id,
-    nullif(trim(au.email), '') as auth_email,
-    nullif(trim(au.phone), '') as auth_phone,
-    coalesce(au.email_confirmed_at is not null, false) as email_confirmed,
-    coalesce(au.phone_confirmed_at is not null, false) as phone_confirmed,
-    au.raw_user_meta_data
-  from auth.users au
-),
-derived as (
-  select
-    s.id,
-    s.auth_email,
-    s.auth_phone,
-    s.email_confirmed,
-    s.phone_confirmed,
-    case
-      when s.auth_email like '%@gymos.app' or s.auth_email like '%@app.local' then 'phone_email_bridge'::public.auth_provider
-      when s.auth_phone is not null then 'phone'::public.auth_provider
-      when s.auth_email is not null then 'email'::public.auth_provider
-      else 'phone'::public.auth_provider
-    end as auth_provider,
-    case
-      when s.auth_email like '%@gymos.app' or s.auth_email like '%@app.local' then 'phone'::public.auth_method
-      when s.auth_phone is not null and s.auth_email is null then 'phone'::public.auth_method
-      when s.auth_email is not null and s.auth_phone is null then 'email'::public.auth_method
-      when s.auth_phone is not null then 'phone'::public.auth_method
-      else 'phone'::public.auth_method
-    end as auth_type,
-    case
-      when s.auth_email like '%@gymos.app' or s.auth_email like '%@app.local' then null
-      else s.auth_email
-    end as profile_email,
-    coalesce(
-      s.auth_phone,
-      nullif(trim(s.raw_user_meta_data->>'phone'), ''),
-      case
-        when s.auth_email like '%@app.local' then '+' || split_part(s.auth_email, '@', 1)
-        when s.auth_email like '%@gymos.app' then '+' || split_part(s.auth_email, '@', 1)
-        else null
-      end
-    ) as profile_phone
-  from auth_snapshot s
-)
-update public.profiles p
-set
-  email = coalesce(p.email, d.profile_email),
-  phone = coalesce(nullif(trim(p.phone), ''), d.profile_phone),
-  auth_provider = d.auth_provider,
-  auth_type = d.auth_type,
-  email_verified = coalesce(p.email_verified, false) or d.email_confirmed,
-  phone_verified = coalesce(p.phone_verified, false) or d.phone_confirmed,
-  provider_metadata = coalesce(p.provider_metadata, '{}'::jsonb)
-    || jsonb_strip_nulls(
-      jsonb_build_object(
-        'migrated_at', now(),
-        'auth_email', d.auth_email,
-        'bridge_domain',
-          case
-            when d.auth_email like '%@gymos.app' then 'gymos.app'
-            when d.auth_email like '%@app.local' then 'app.local'
-            else null
-          end
-      )
-    )
-from derived d
-where p.id = d.id;
-
--- -----------------------------------------------------------------------------
--- Phone constraint: required for phone auth; optional for email auth
--- -----------------------------------------------------------------------------
-alter table public.profiles drop constraint if exists profiles_phone_not_blank;
-
-alter table public.profiles
-  add constraint profiles_phone_required_for_phone_auth check (
-    auth_type = 'email'
-    or (phone is not null and length(trim(phone)) > 0)
-  );
-
--- -----------------------------------------------------------------------------
 -- Trigger: derive phone from auth when possible; skip for email-only users
+-- (Must run before backfill UPDATE so email-only profiles are not rejected.)
 -- -----------------------------------------------------------------------------
 create or replace function public.ensure_profile_phone_on_insert_update()
 returns trigger
@@ -174,6 +92,103 @@ begin
   return new;
 end;
 $$;
+
+-- -----------------------------------------------------------------------------
+-- Backfill from auth.users (non-destructive)
+-- -----------------------------------------------------------------------------
+with auth_snapshot as (
+  select
+    au.id,
+    nullif(trim(au.email), '') as auth_email,
+    nullif(trim(au.phone), '') as auth_phone,
+    coalesce(au.email_confirmed_at is not null, false) as email_confirmed,
+    coalesce(au.phone_confirmed_at is not null, false) as phone_confirmed,
+    au.raw_user_meta_data
+  from auth.users au
+),
+derived as (
+  select
+    s.id,
+    s.auth_email,
+    s.auth_phone,
+    s.email_confirmed,
+    s.phone_confirmed,
+    case
+      when s.auth_email like '%@gymos.app' or s.auth_email like '%@app.local' then 'phone_email_bridge'::public.auth_provider
+      when s.auth_phone is not null then 'phone'::public.auth_provider
+      when s.auth_email is not null then 'email'::public.auth_provider
+      else 'phone'::public.auth_provider
+    end as auth_provider,
+    case
+      when s.auth_email like '%@gymos.app' or s.auth_email like '%@app.local' then 'phone'::public.auth_method
+      when s.auth_phone is not null and s.auth_email is null then 'phone'::public.auth_method
+      when s.auth_email is not null and s.auth_phone is null then 'email'::public.auth_method
+      when s.auth_phone is not null then 'phone'::public.auth_method
+      else 'phone'::public.auth_method
+    end as auth_type,
+    case
+      when s.auth_email like '%@gymos.app' or s.auth_email like '%@app.local' then null
+      else s.auth_email
+    end as profile_email,
+    coalesce(
+      s.auth_phone,
+      nullif(trim(s.raw_user_meta_data->>'phone'), ''),
+      case
+        when s.auth_email like '%@app.local' then '+' || split_part(s.auth_email, '@', 1)
+        when s.auth_email like '%@gymos.app' then '+' || split_part(s.auth_email, '@', 1)
+        else null
+      end
+    ) as profile_phone
+  from auth_snapshot s
+)
+update public.profiles p
+set
+  email = coalesce(p.email, d.profile_email),
+  phone = coalesce(nullif(trim(p.phone), ''), d.profile_phone, p.phone),
+  auth_provider = case
+    when coalesce(nullif(trim(p.phone), ''), d.profile_phone) is not null then d.auth_provider
+    when coalesce(p.email, d.profile_email) is not null then 'email'::public.auth_provider
+    else d.auth_provider
+  end,
+  auth_type = case
+    when coalesce(nullif(trim(p.phone), ''), d.profile_phone) is not null then d.auth_type
+    when coalesce(p.email, d.profile_email) is not null then 'email'::public.auth_method
+    else p.auth_type
+  end,
+  email_verified = coalesce(p.email_verified, false) or d.email_confirmed,
+  phone_verified = coalesce(p.phone_verified, false) or d.phone_confirmed,
+  provider_metadata = coalesce(p.provider_metadata, '{}'::jsonb)
+    || jsonb_strip_nulls(
+      jsonb_build_object(
+        'migrated_at', now(),
+        'auth_email', d.auth_email,
+        'bridge_domain',
+          case
+            when d.auth_email like '%@gymos.app' then 'gymos.app'
+            when d.auth_email like '%@app.local' then 'app.local'
+            else null
+          end
+      )
+    )
+from derived d
+where p.id = d.id
+  and (
+    nullif(trim(p.phone), '') is not null
+    or d.profile_phone is not null
+    or coalesce(p.email, d.profile_email) is not null
+  );
+
+-- -----------------------------------------------------------------------------
+-- Phone constraint: required for phone auth; optional for email auth
+-- -----------------------------------------------------------------------------
+alter table public.profiles drop constraint if exists profiles_phone_not_blank;
+alter table public.profiles drop constraint if exists profiles_phone_required_for_phone_auth;
+
+alter table public.profiles
+  add constraint profiles_phone_required_for_phone_auth check (
+    auth_type = 'email'
+    or (phone is not null and length(trim(phone)) > 0)
+  );
 
 -- -----------------------------------------------------------------------------
 -- New user -> profile (hybrid-aware)

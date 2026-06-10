@@ -33,27 +33,41 @@ export function useNotificationBootstrap() {
   const userId = useAuthStore((state) => state.session?.user.id);
   const queryClient = useQueryClient();
 
+  const registerAndSavePushToken = async () => {
+    const result = await registerForPushNotifications();
+    if (!result.granted) {
+      logger.warn('notifications.bootstrap_skipped', { reason: result.reason });
+      return;
+    }
+
+    logExpoPushToken(result.token, userId);
+
+    try {
+      await savePushToken(userId!, result.token, Platform.OS);
+      await flushUserPushNotifications();
+    } catch (error) {
+      logger.warn('notifications.bootstrap_save_failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!userId || !isNativePushSupported) return;
+    void registerAndSavePushToken();
+  }, [userId]);
+
   useEffect(() => {
     if (!userId || !isNativePushSupported) return;
 
-    void (async () => {
-      const result = await registerForPushNotifications();
-      if (!result.granted) {
-        logger.warn('notifications.bootstrap_skipped', { reason: result.reason });
-        return;
+    const refreshTokenOnActive = (state: string) => {
+      if (state === 'active') {
+        void registerAndSavePushToken();
       }
+    };
 
-      logExpoPushToken(result.token, userId);
-
-      try {
-        await savePushToken(userId, result.token, Platform.OS);
-        await flushUserPushNotifications();
-      } catch (error) {
-        logger.warn('notifications.bootstrap_save_failed', {
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-    })();
+    const appStateSub = AppState.addEventListener('change', refreshTokenOnActive);
+    return () => appStateSub.remove();
   }, [userId]);
 
   useEffect(() => {
@@ -66,7 +80,7 @@ export function useNotificationBootstrap() {
     };
 
     flushOnActive();
-    const appStateSub = AppState.addEventListener('change', (state) => {
+    const flushAppStateSub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         void flushUserPushNotifications();
       }
@@ -141,7 +155,7 @@ export function useNotificationBootstrap() {
     });
 
     return () => {
-      appStateSub.remove();
+      flushAppStateSub.remove();
       void supabase.removeChannel(channel);
       receivedSub.remove();
       responseSub.remove();

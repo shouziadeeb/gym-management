@@ -174,6 +174,7 @@ export type OwnerJoinRequestDetail = {
   status: 'pending' | 'approved' | 'rejected' | 'cancelled';
   source: string;
   createdAt: string;
+  updatedAt: string;
   requester: {
     fullName: string | null;
     phone: string | null;
@@ -189,7 +190,7 @@ export async function fetchGymJoinRequestForOwner(
   const { data, error } = await supabase
     .from('gym_join_requests')
     .select(
-      'id, gym_id, user_id, status, source, created_at, requester:profiles!user_id(full_name, phone, email, avatar_url, account_type), gym:gyms!gym_id(name)',
+      'id, gym_id, user_id, status, source, created_at, updated_at, requester:profiles!user_id(full_name, phone, email, avatar_url, account_type), gym:gyms!gym_id(name)',
     )
     .eq('id', requestId)
     .maybeSingle();
@@ -214,6 +215,7 @@ export async function fetchGymJoinRequestForOwner(
     status: data.status as OwnerJoinRequestDetail['status'],
     source: String(data.source ?? 'app'),
     createdAt: data.created_at as string,
+    updatedAt: data.updated_at as string,
     requester: {
       fullName: requester?.full_name ?? null,
       phone: requester?.phone ?? null,

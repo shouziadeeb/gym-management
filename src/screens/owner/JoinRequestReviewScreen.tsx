@@ -104,7 +104,12 @@ export function JoinRequestReviewScreen() {
               </Text>
             ) : null}
             <Text className={`${layout.stackSm} ${text.caption}`}>
-              Requested: {new Date(request.createdAt).toLocaleString()}
+              Requested:{' '}
+              {new Date(
+                request.updatedAt && request.updatedAt > request.createdAt
+                  ? request.updatedAt
+                  : request.createdAt,
+              ).toLocaleString()}
             </Text>
             <Text className={`${layout.stackSm} ${text.caption}`}>Source: {request.source}</Text>
             {!isPending ? (
