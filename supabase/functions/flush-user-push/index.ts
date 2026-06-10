@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
-import { sendExpoPushBatch } from '../_shared/expo-push.ts';
+import { buildExpoPushMessage, sendExpoPushBatch } from '../_shared/expo-push.ts';
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') {
@@ -69,13 +69,14 @@ Deno.serve(async (req) => {
 
   for (const notification of pending) {
     await sendExpoPushBatch(
-      tokens.map((row) => ({
-        to: row.expo_push_token,
-        title: notification.title,
-        body: notification.body ?? '',
-        data: { notificationId: notification.id, ...(notification.data as object) },
-        sound: 'default',
-      })),
+      tokens.map((row) =>
+        buildExpoPushMessage({
+          to: row.expo_push_token,
+          title: notification.title,
+          body: notification.body ?? '',
+          data: { notificationId: notification.id, ...(notification.data as object) },
+        }),
+      ),
     );
 
     const { error: updateError } = await admin

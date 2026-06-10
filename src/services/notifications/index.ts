@@ -1,9 +1,11 @@
 export {
+  logExpoPushToken,
   registerForPushNotifications,
   type PushRegistrationResult,
 } from '@/services/notifications/registerForPushNotifications';
 export { savePushToken } from '@/services/notifications/savePushToken';
 export { flushUserPushNotifications } from '@/services/notifications/flushUserPush';
+export { presentLocalNotification } from '@/services/notifications/presentLocalNotification';
 export {
   addNotificationReceivedListener,
   addNotificationResponseListener,

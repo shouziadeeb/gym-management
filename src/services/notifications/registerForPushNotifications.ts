@@ -15,6 +15,22 @@ function resolveExpoProjectId(): string | undefined {
   return extra?.eas?.projectId ?? Constants.easConfig?.projectId;
 }
 
+function shouldLogPushTokenInConsole(): boolean {
+  return __DEV__ || process.env.EXPO_PUBLIC_ALLOW_PROD_DEV_AUTH === 'true';
+}
+
+/** Prints the Expo push token in Metro/device logs for manual push testing. */
+export function logExpoPushToken(token: string, userId?: string): void {
+  if (!shouldLogPushTokenInConsole()) return;
+
+  console.log('\n========================================');
+  console.log('EXPO PUSH TOKEN — copy for test notifications');
+  if (userId) console.log('User ID:', userId);
+  console.log('Token:', token);
+  console.log('Send a test push: https://expo.dev/notifications');
+  console.log('========================================\n');
+}
+
 export async function registerForPushNotifications(): Promise<PushRegistrationResult> {
   if (Platform.OS === 'web') {
     return { granted: false, reason: 'unsupported' };
@@ -27,8 +43,10 @@ export async function registerForPushNotifications(): Promise<PushRegistrationRe
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync(EXPO_PUSH_CHANNEL, {
       name: 'GYM Alerts',
-      importance: Notifications.AndroidImportance.HIGH,
+      importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
+      enableVibrate: true,
+      showBadge: true,
     });
   }
 
@@ -50,11 +68,13 @@ export async function registerForPushNotifications(): Promise<PushRegistrationRe
     const tokenResponse = await Notifications.getExpoPushTokenAsync(
       projectId ? { projectId } : undefined,
     );
+    const token = tokenResponse.data;
     logger.info('notifications.token_registered', {
       platform: Platform.OS,
       hasProjectId: Boolean(projectId),
+      token,
     });
-    return { granted: true, token: tokenResponse.data };
+    return { granted: true, token };
   } catch (error) {
     logger.warn('notifications.token_registration_failed', {
       platform: Platform.OS,

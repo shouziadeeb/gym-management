@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
-import { sendExpoPushBatch } from '../_shared/expo-push.ts';
+import { buildExpoPushMessage, sendExpoPushBatch } from '../_shared/expo-push.ts';
 
 type MembershipRow = {
   id: string;
@@ -65,13 +65,14 @@ async function pushToUser(
   if (!tokens?.length) return 0;
 
   await sendExpoPushBatch(
-    tokens.map((row) => ({
-      to: row.expo_push_token,
-      title,
-      body,
-      data,
-      sound: 'default',
-    })),
+    tokens.map((row) =>
+      buildExpoPushMessage({
+        to: row.expo_push_token,
+        title,
+        body,
+        data,
+      }),
+    ),
   );
 
   return tokens.length;

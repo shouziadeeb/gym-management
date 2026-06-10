@@ -14,7 +14,12 @@ export async function flushUserPushNotifications(): Promise<void> {
     return;
   }
 
-  if (__DEV__ && data && typeof data === 'object') {
-    logger.info('notifications.flush_user_push', data as Record<string, unknown>);
+  if (data && typeof data === 'object') {
+    const payload = data as Record<string, unknown>;
+    if (payload.reason === 'no_push_tokens') {
+      logger.warn('notifications.flush_no_push_tokens');
+    } else if (__DEV__) {
+      logger.info('notifications.flush_user_push', payload);
+    }
   }
 }

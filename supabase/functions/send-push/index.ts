@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
-import { sendExpoPushBatch } from '../_shared/expo-push.ts';
+import { buildExpoPushMessage, sendExpoPushBatch } from '../_shared/expo-push.ts';
 
 type PushRequest = {
   userId?: string;
@@ -48,13 +48,14 @@ Deno.serve(async (req) => {
       .eq('user_id', notification.user_id);
 
     await sendExpoPushBatch(
-      (tokens ?? []).map((row) => ({
-        to: row.expo_push_token,
-        title: notification.title,
-        body: notification.body ?? '',
-        data: { notificationId: notification.id, ...(notification.data as object) },
-        sound: 'default',
-      })),
+      (tokens ?? []).map((row) =>
+        buildExpoPushMessage({
+          to: row.expo_push_token,
+          title: notification.title,
+          body: notification.body ?? '',
+          data: { notificationId: notification.id, ...(notification.data as object) },
+        }),
+      ),
     );
 
     await supabase
@@ -74,13 +75,14 @@ Deno.serve(async (req) => {
       .eq('user_id', payload.userId);
 
     await sendExpoPushBatch(
-      (tokens ?? []).map((row) => ({
-        to: row.expo_push_token,
-        title: payload.title!,
-        body: payload.body ?? '',
-        data: payload.data ?? {},
-        sound: 'default',
-      })),
+      (tokens ?? []).map((row) =>
+        buildExpoPushMessage({
+          to: row.expo_push_token,
+          title: payload.title!,
+          body: payload.body ?? '',
+          data: payload.data ?? {},
+        }),
+      ),
     );
 
     return new Response(JSON.stringify({ ok: true, sent: tokens?.length ?? 0 }), {
@@ -106,13 +108,14 @@ Deno.serve(async (req) => {
     if (!tokens?.length) continue;
 
     await sendExpoPushBatch(
-      tokens.map((row) => ({
-        to: row.expo_push_token,
-        title: notification.title,
-        body: notification.body ?? '',
-        data: { notificationId: notification.id, ...(notification.data as object) },
-        sound: 'default',
-      })),
+      tokens.map((row) =>
+        buildExpoPushMessage({
+          to: row.expo_push_token,
+          title: notification.title,
+          body: notification.body ?? '',
+          data: { notificationId: notification.id, ...(notification.data as object) },
+        }),
+      ),
     );
 
     await supabase

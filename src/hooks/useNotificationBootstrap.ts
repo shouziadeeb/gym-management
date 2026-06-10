@@ -7,6 +7,8 @@ import {
   addNotificationResponseListener,
   flushUserPushNotifications,
   getLastNotificationResponse,
+  presentLocalNotification,
+  logExpoPushToken,
   registerForPushNotifications,
   savePushToken,
 } from '@/services/notifications';
@@ -15,9 +17,17 @@ import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/api/queries/keys';
 import { fetchNotifications } from '@/api/notifications.api';
 import { resolveNotificationHref } from '@/lib/notification-navigation';
+import { logger } from '@/lib/logger';
 import { supabase } from '@/lib/supabase';
 
 const isNativePushSupported = Platform.OS === 'ios' || Platform.OS === 'android';
+
+type RealtimeNotificationRow = {
+  id?: string;
+  title?: string;
+  body?: string | null;
+  data?: Record<string, unknown> | null;
+};
 
 export function useNotificationBootstrap() {
   const userId = useAuthStore((state) => state.session?.user.id);
@@ -28,9 +38,20 @@ export function useNotificationBootstrap() {
 
     void (async () => {
       const result = await registerForPushNotifications();
-      if (result.granted) {
+      if (!result.granted) {
+        logger.warn('notifications.bootstrap_skipped', { reason: result.reason });
+        return;
+      }
+
+      logExpoPushToken(result.token, userId);
+
+      try {
         await savePushToken(userId, result.token, Platform.OS);
         await flushUserPushNotifications();
+      } catch (error) {
+        logger.warn('notifications.bootstrap_save_failed', {
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     })();
   }, [userId]);
@@ -65,9 +86,30 @@ export function useNotificationBootstrap() {
           table: 'notifications',
           filter: `user_id=eq.${userId}`,
         },
-        () => {
+        (payload) => {
           invalidate();
-          void flushUserPushNotifications();
+
+          const row = payload.new as RealtimeNotificationRow;
+          const isActive = AppState.currentState === 'active';
+
+          if (
+            isActive &&
+            typeof row.id === 'string' &&
+            typeof row.title === 'string'
+          ) {
+            void presentLocalNotification({
+              id: row.id,
+              title: row.title,
+              body: row.body,
+              data: row.data,
+            }).catch((error) => {
+              logger.warn('notifications.local_present_failed', {
+                error: error instanceof Error ? error.message : String(error),
+              });
+            });
+          } else if (!isActive) {
+            void flushUserPushNotifications();
+          }
         },
       )
       .subscribe();

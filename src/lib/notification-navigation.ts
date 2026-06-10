@@ -13,7 +13,15 @@ export function resolveNotificationHref(notification: AppNotification): string |
       }
       return routes.manageMembers;
 
+    case 'owner_new_follower':
+      if (typeof gymId === 'string') {
+        return routes.gymDetail(gymId);
+      }
+      return routes.dashboard;
+
     case 'member_gym_invite':
+    case 'member_join_approved':
+    case 'member_join_rejected':
       return routes.memberships;
 
     case 'checkin_success':

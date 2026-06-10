@@ -152,9 +152,16 @@ export async function fetchUserGymJoinStatus(
       .maybeSingle(),
   ]);
 
+  const isMember = Boolean(membership);
+  const rawStatus = request?.status as UserGymJoinStatus['joinRequestStatus'] | undefined;
+
+  // Stale row: approved in DB but membership was removed — user may connect again.
+  const joinRequestStatus =
+    !isMember && rawStatus === 'approved' ? null : (rawStatus ?? null);
+
   return {
-    isMember: Boolean(membership),
-    joinRequestStatus: (request?.status as UserGymJoinStatus['joinRequestStatus']) ?? null,
+    isMember,
+    joinRequestStatus,
     requestId: typeof request?.id === 'string' ? request.id : null,
   };
 }

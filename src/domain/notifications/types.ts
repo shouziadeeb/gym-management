@@ -17,6 +17,8 @@ export type AppNotificationType =
   | 'announcement_holiday'
   | 'announcement_gym_update'
   | 'member_gym_invite'
+  | 'member_join_approved'
+  | 'member_join_rejected'
   | 'owner_new_member'
   | 'owner_membership_renewed'
   | 'owner_membership_expired'
@@ -24,6 +26,7 @@ export type AppNotificationType =
   | 'owner_payment_pending'
   | 'owner_payment_failed'
   | 'owner_join_request'
+  | 'owner_new_follower'
   | 'owner_new_inquiry'
   | 'owner_attendance_summary'
   | 'owner_low_attendance'
@@ -74,10 +77,13 @@ const MEMBERSHIP_TYPES: AppNotificationType[] = [
   'membership_expiry_1d',
   'membership_expired',
   'member_gym_invite',
+  'member_join_approved',
+  'member_join_rejected',
   'owner_new_member',
   'owner_membership_renewed',
   'owner_membership_expired',
   'owner_join_request',
+  'owner_new_follower',
 ];
 
 const PAYMENT_TYPES: AppNotificationType[] = [
@@ -112,6 +118,7 @@ const ANNOUNCEMENT_TYPES: AppNotificationType[] = [
 ];
 
 const BUSINESS_TYPES: AppNotificationType[] = [
+  'owner_new_follower',
   'owner_revenue_summary',
   'owner_weekly_report',
   'owner_plan_expiry',

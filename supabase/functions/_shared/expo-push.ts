@@ -1,12 +1,34 @@
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 
+/** Must match EXPO_PUSH_CHANNEL in the mobile app. */
+export const EXPO_PUSH_CHANNEL_ID = 'default';
+
 export type ExpoPushMessage = {
   to: string;
   title: string;
   body: string;
   data?: Record<string, unknown>;
   sound?: 'default' | null;
+  channelId?: string;
+  priority?: 'default' | 'normal' | 'high';
 };
+
+export function buildExpoPushMessage(input: {
+  to: string;
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
+}): ExpoPushMessage {
+  return {
+    to: input.to,
+    title: input.title,
+    body: input.body,
+    data: input.data,
+    sound: 'default',
+    channelId: EXPO_PUSH_CHANNEL_ID,
+    priority: 'high',
+  };
+}
 
 export async function sendExpoPushBatch(messages: ExpoPushMessage[]): Promise<void> {
   if (!messages.length) return;
