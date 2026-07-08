@@ -1,6 +1,6 @@
 import { BlurView } from 'expo-blur';
 import type { ReactNode } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { useTheme } from '@/hooks/useTheme';
 import { isWeb, webFullWidthStyle } from '@/lib/web-layout';
@@ -20,13 +20,22 @@ type Props = {
 
 /** Centered frosted glass card for onboarding forms. */
 export function OnboardingFormPanel({ children, spacious = false, embedded = false }: Props) {
+  const { width } = useWindowDimensions();
   const { colors, isDark } = useTheme();
   const surface = onboardingFormPanelSurface(colors, isDark, spacious);
   const useNativeBlur = !isWeb && !spacious && Platform.OS !== 'android';
+  const isDesktopWeb = isWeb && width >= 1024;
+  const panelMaxWidth = isDesktopWeb ? (spacious ? 640 : 560) : PANEL_MAX_WIDTH;
 
   return (
     <View style={[styles.centerWrap, embedded && styles.centerWrapEmbedded, webFullWidthStyle]}>
-      <View style={[styles.shell, { borderColor: surface.borderColor }, webFullWidthStyle]}>
+      <View
+        style={[
+          styles.shell,
+          { borderColor: surface.borderColor, maxWidth: panelMaxWidth },
+          webFullWidthStyle,
+        ]}
+      >
         <View
           pointerEvents="none"
           style={[StyleSheet.absoluteFillObject, styles.backdropLayer, surface, isWeb ? styles.webBackdrop : null]}

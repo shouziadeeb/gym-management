@@ -6,6 +6,7 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -57,8 +58,11 @@ function pickFeaturedGym(
 }
 
 export function ExploreScreen() {
+  const { width } = useWindowDimensions();
   const { colors } = useTheme();
   const scrollBottomPadding = useScreenScrollBottomPadding();
+  const isDesktopWeb = Platform.OS === "web" && width >= 1024;
+  const desktopFilterWidth = Math.max(320, Math.min(420, width * 0.33));
   const params = useLocalSearchParams<RouteParams>();
 
   const [search, setSearch] = useState("");
@@ -165,39 +169,25 @@ export function ExploreScreen() {
     [openGym, priceHintLabel, pricePresetId],
   );
 
-  const listHeader = (
-    <View style={styles.header}>
-      <Text style={[styles.title, { color: colors.foreground }]}>
-        Explore gyms
-      </Text>
-      <Text style={[styles.subtitle, { color: colors.muted }]}>
-        Search with filters and performance metrics.
-      </Text>
-      <Text style={[styles.count, { color: colors.primary }]}>
-        {explore.totalMatched} GYMS NEARBY
-      </Text>
+  const filtersNode = (
+    <ExploreFiltersBlock
+      search={search}
+      onSearchChange={setSearch}
+      sort={sort}
+      onSortChange={setSort}
+      categoryOptions={explore.categoryOptions}
+      categories={categories}
+      onToggleCategory={toggleCategory}
+      ratingPresetId={ratingPresetId}
+      onRatingSelect={setRatingPresetId}
+      pricePresetId={pricePresetId}
+      onPriceSelect={setPricePresetId}
+      onReset={clearFilters}
+    />
+  );
 
-      {explore.distanceFallbackActive ? (
-        <Text style={[styles.hint, { color: colors.muted }]}>
-          Enable location for nearest sorting.
-        </Text>
-      ) : null}
-
-      <ExploreFiltersBlock
-        search={search}
-        onSearchChange={setSearch}
-        sort={sort}
-        onSortChange={setSort}
-        categoryOptions={explore.categoryOptions}
-        categories={categories}
-        onToggleCategory={toggleCategory}
-        ratingPresetId={ratingPresetId}
-        onRatingSelect={setRatingPresetId}
-        pricePresetId={pricePresetId}
-        onPriceSelect={setPricePresetId}
-        onReset={clearFilters}
-      />
-
+  const featuredNode = (
+    <>
       {explore.isInitialLoading && !explore.cards.length ? (
         <View style={styles.loadingBlock}>
           <GymDiscoverCardSkeleton />
@@ -211,6 +201,38 @@ export function ExploreScreen() {
           onPress={() => openGym(featuredGym.id)}
         />
       ) : null}
+    </>
+  );
+
+  const listHeader = (
+    <View style={styles.header}>
+      <Text style={[styles.title, { color: colors.foreground }]}>Explore gyms</Text>
+      <Text style={[styles.subtitle, { color: colors.muted }]}>
+        Search with filters and performance metrics.
+      </Text>
+      <Text style={[styles.count, { color: colors.primary }]}>
+        {explore.totalMatched} GYMS NEARBY
+      </Text>
+
+      {explore.distanceFallbackActive ? (
+        <Text style={[styles.hint, { color: colors.muted }]}>
+          Enable location for nearest sorting.
+        </Text>
+      ) : null}
+
+      {isDesktopWeb ? (
+        <View style={styles.desktopHeaderGrid}>
+          <View style={[styles.desktopFiltersPane, { width: desktopFilterWidth }]}>
+            {filtersNode}
+          </View>
+          <View style={styles.desktopFeaturedPane}>{featuredNode}</View>
+        </View>
+      ) : (
+        <>
+          {filtersNode}
+          {featuredNode}
+        </>
+      )}
     </View>
   );
 
@@ -280,6 +302,19 @@ export function ExploreScreen() {
 const styles = StyleSheet.create({
   header: {
     paddingTop: spacing[2],
+  },
+  desktopHeaderGrid: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing[6],
+    marginBottom: spacing[2],
+  },
+  desktopFiltersPane: {
+    flexShrink: 0,
+  },
+  desktopFeaturedPane: {
+    flex: 1,
+    minWidth: 0,
   },
   title: {
     fontSize: 28,

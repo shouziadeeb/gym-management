@@ -20,8 +20,9 @@ export const PromoBannerCarousel = memo(function PromoBannerCarousel() {
     }
   }, []);
 
-  /** One card spans the content gutter; peek the next tile while scrolling. */
-  const tileWidth = Math.max(280, railWidth - edgePadding * 2);
+  /** Keep desktop tiles readable instead of stretching full-width. */
+  const maxDesktopTileWidth = Platform.OS === 'web' ? 540 : Number.POSITIVE_INFINITY;
+  const tileWidth = Math.max(280, Math.min(maxDesktopTileWidth, railWidth - edgePadding * 2));
 
   return (
     <View style={fullBleedHorizontalStyle(edgePadding)} onLayout={onRailLayout}>

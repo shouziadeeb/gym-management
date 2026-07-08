@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { updateMyProfile } from '@/api/profiles.api';
 import { queryClient } from '@/api/queries/client';
@@ -50,11 +50,15 @@ function ProfileDetailRow({ label, value }: { label: string; value: string }) {
 }
 
 export function UserProfileScreen() {
+  const { width } = useWindowDimensions();
   const { colors } = useTheme();
   const session = useAuthStore((state) => state.session);
   const profileQuery = useMyProfile();
   const [isEditing, setIsEditing] = useState(false);
   const [isOpeningEdit, setIsOpeningEdit] = useState(false);
+  const isDesktopWeb = Platform.OS === 'web' && width >= 1100;
+  const desktopColumns = width >= 1650 ? 3 : 2;
+  const desktopFieldWidth = `${100 / desktopColumns}%` as `${number}%`;
 
   const profile = profileQuery.data;
   const isEmailUser = isEmailAuthUser(profile, session?.user ?? null);
@@ -218,23 +222,39 @@ export function UserProfileScreen() {
 
       {!isEditing ? (
         <Card title="Account details" className={layout.section}>
-          {isEmailUser ? (
-            <ProfileDetailRow label="Email" value={resolvedEmail ?? 'Not set'} />
-          ) : (
-            <ProfileDetailRow label="Phone" value={resolvedPhone ?? 'Not set'} />
-          )}
-          <ProfileDetailRow label="Full name" value={resolvedName} />
-          <ProfileDetailRow label="Gender" value={formatGenderLabel(profile?.gender ?? null)} />
-          <ProfileDetailRow
-            label="Age"
-            value={resolvedAge ? `${resolvedAge} years` : 'Not set'}
-          />
-          <ProfileDetailRow
-            label="Date of birth"
-            value={formatDateLabel(profile?.date_of_birth)}
-          />
-          <ProfileDetailRow label="Address" value={profileAddress ?? 'Not set'} />
-          <ProfileDetailRow label="Fitness goal" value={profile?.fitness_goal?.trim() || 'Not set'} />
+          <View style={isDesktopWeb ? styles.formGrid : null}>
+            <View style={isDesktopWeb ? [styles.formGridItem, { width: desktopFieldWidth }] : null}>
+              {isEmailUser ? (
+                <ProfileDetailRow label="Email" value={resolvedEmail ?? 'Not set'} />
+              ) : (
+                <ProfileDetailRow label="Phone" value={resolvedPhone ?? 'Not set'} />
+              )}
+            </View>
+            <View style={isDesktopWeb ? [styles.formGridItem, { width: desktopFieldWidth }] : null}>
+              <ProfileDetailRow label="Full name" value={resolvedName} />
+            </View>
+            <View style={isDesktopWeb ? [styles.formGridItem, { width: desktopFieldWidth }] : null}>
+              <ProfileDetailRow label="Gender" value={formatGenderLabel(profile?.gender ?? null)} />
+            </View>
+            <View style={isDesktopWeb ? [styles.formGridItem, { width: desktopFieldWidth }] : null}>
+              <ProfileDetailRow
+                label="Age"
+                value={resolvedAge ? `${resolvedAge} years` : 'Not set'}
+              />
+            </View>
+            <View style={isDesktopWeb ? [styles.formGridItem, { width: desktopFieldWidth }] : null}>
+              <ProfileDetailRow
+                label="Date of birth"
+                value={formatDateLabel(profile?.date_of_birth)}
+              />
+            </View>
+            <View style={isDesktopWeb ? [styles.formGridItem, { width: desktopFieldWidth }] : null}>
+              <ProfileDetailRow label="Address" value={profileAddress ?? 'Not set'} />
+            </View>
+            <View style={isDesktopWeb ? [styles.formGridItem, { width: desktopFieldWidth }] : null}>
+              <ProfileDetailRow label="Fitness goal" value={profile?.fitness_goal?.trim() || 'Not set'} />
+            </View>
+          </View>
 
           <View className={layout.stackMd}>
             <Button title="Edit profile" onPress={openEditMode} loading={isOpeningEdit} />
@@ -242,109 +262,130 @@ export function UserProfileScreen() {
         </Card>
       ) : (
         <Card title="Edit profile" className={layout.section}>
-          {isEmailUser ? (
-            <Input
-              label="Email"
-              value={resolvedEmail ?? ''}
-              editable={false}
-              autoCapitalize="none"
-            />
-          ) : (
-            <Controller
-              control={form.control}
-              name="phone"
-              render={({ field: { onChange, value } }) => (
-                <Input label="Phone" placeholder="+919876543210" value={value} onChangeText={onChange} keyboardType="phone-pad" />
-              )}
-            />
-          )}
-          {isEmailUser ? (
-            <Controller
-              control={form.control}
-              name="phone"
-              render={({ field: { onChange, value } }) => (
+          <View style={isDesktopWeb ? styles.formGrid : null}>
+            <View style={isDesktopWeb ? [styles.formGridItem, { width: desktopFieldWidth }] : null}>
+              {isEmailUser ? (
                 <Input
-                  label={isOnboarding ? 'Phone (optional)' : 'Phone'}
-                  placeholder="+919876543210"
-                  value={value}
-                  onChangeText={onChange}
-                  keyboardType="phone-pad"
+                  label="Email"
+                  value={resolvedEmail ?? ''}
+                  editable={false}
+                  autoCapitalize="none"
+                />
+              ) : (
+                <Controller
+                  control={form.control}
+                  name="phone"
+                  render={({ field: { onChange, value } }) => (
+                    <Input label="Phone" placeholder="+919876543210" value={value} onChangeText={onChange} keyboardType="phone-pad" />
+                  )}
                 />
               )}
-            />
-          ) : null}
-          <Controller
-            control={form.control}
-            name="fullName"
-            render={({ field: { onChange, value } }) => (
-              <Input label="Full name" placeholder="Your name" value={value} onChangeText={onChange} autoCapitalize="sentences" />
-            )}
-          />
-          <Controller
-            control={form.control}
-            name="gender"
-            render={({ field: { onChange, value } }) => (
-              <SelectField label="Gender" value={value} options={PROFILE_GENDER_OPTIONS} onChange={onChange} />
-            )}
-          />
-          <Controller
-            control={form.control}
-            name="dateOfBirth"
-            render={({ field: { onChange, value } }) => (
-              <DatePickerField
-                label="Age (date of birth)"
-                value={value}
-                onChange={onChange}
-                placeholder="Select date of birth"
-                maximumDate={birthDateBounds.maximumDate}
-                minimumDate={birthDateBounds.minimumDate}
+            </View>
+
+            {isEmailUser ? (
+              <View style={isDesktopWeb ? [styles.formGridItem, { width: desktopFieldWidth }] : null}>
+                <Controller
+                  control={form.control}
+                  name="phone"
+                  render={({ field: { onChange, value } }) => (
+                    <Input
+                      label={isOnboarding ? 'Phone (optional)' : 'Phone'}
+                      placeholder="+919876543210"
+                      value={value}
+                      onChangeText={onChange}
+                      keyboardType="phone-pad"
+                    />
+                  )}
+                />
+              </View>
+            ) : null}
+
+            <View style={isDesktopWeb ? [styles.formGridItem, { width: desktopFieldWidth }] : null}>
+              <Controller
+                control={form.control}
+                name="fullName"
+                render={({ field: { onChange, value } }) => (
+                  <Input label="Full name" placeholder="Your name" value={value} onChangeText={onChange} autoCapitalize="sentences" />
+                )}
               />
-            )}
-          />
-          <Controller
-            control={form.control}
-            name="city"
-            render={({ field: { onChange, value } }) => (
-              <Input
-                label="Address (manual)"
-                placeholder="Street, area, city"
-                value={value}
-                onChangeText={onChange}
-                autoCapitalize="sentences"
+            </View>
+            <View style={isDesktopWeb ? [styles.formGridItem, { width: desktopFieldWidth }] : null}>
+              <Controller
+                control={form.control}
+                name="gender"
+                render={({ field: { onChange, value } }) => (
+                  <SelectField label="Gender" value={value} options={PROFILE_GENDER_OPTIONS} onChange={onChange} />
+                )}
               />
-            )}
-          />
-          <LocationPickerField
-            label="Home location"
-            description="Preferred — this address is shown on your profile when set."
-            latitude={form.watch('homeLatitude')}
-            longitude={form.watch('homeLongitude')}
-            locationLabel={form.watch('homeLocationLabel')}
-            disabled={form.formState.isSubmitting}
-            onCoordinatesChange={(next) => {
-              form.setValue('homeLatitude', next.latitude, { shouldValidate: true });
-              form.setValue('homeLongitude', next.longitude, { shouldValidate: true });
-              form.setValue('homeLocationLabel', next.label?.trim() ?? '', { shouldValidate: true });
-            }}
-            onClear={() => {
-              form.setValue('homeLatitude', null, { shouldValidate: true });
-              form.setValue('homeLongitude', null, { shouldValidate: true });
-              form.setValue('homeLocationLabel', '', { shouldValidate: true });
-            }}
-          />
-          <Controller
-            control={form.control}
-            name="fitnessGoal"
-            render={({ field: { onChange, value } }) => (
-              <Input
-                label="Fitness goal"
-                placeholder="Strength and fat loss"
-                value={value}
-                onChangeText={onChange}
-                autoCapitalize="sentences"
+            </View>
+            <View style={isDesktopWeb ? [styles.formGridItem, { width: desktopFieldWidth }] : null}>
+              <Controller
+                control={form.control}
+                name="dateOfBirth"
+                render={({ field: { onChange, value } }) => (
+                  <DatePickerField
+                    label="Age (date of birth)"
+                    value={value}
+                    onChange={onChange}
+                    placeholder="Select date of birth"
+                    maximumDate={birthDateBounds.maximumDate}
+                    minimumDate={birthDateBounds.minimumDate}
+                  />
+                )}
               />
-            )}
-          />
+            </View>
+            <View style={isDesktopWeb ? [styles.formGridItem, { width: desktopFieldWidth }] : null}>
+              <Controller
+                control={form.control}
+                name="city"
+                render={({ field: { onChange, value } }) => (
+                  <Input
+                    label="Address (manual)"
+                    placeholder="Street, area, city"
+                    value={value}
+                    onChangeText={onChange}
+                    autoCapitalize="sentences"
+                  />
+                )}
+              />
+            </View>
+            <View style={isDesktopWeb ? [styles.formGridItem, { width: desktopFieldWidth }] : null}>
+              <Controller
+                control={form.control}
+                name="fitnessGoal"
+                render={({ field: { onChange, value } }) => (
+                  <Input
+                    label="Fitness goal"
+                    placeholder="Strength and fat loss"
+                    value={value}
+                    onChangeText={onChange}
+                    autoCapitalize="sentences"
+                  />
+                )}
+              />
+            </View>
+
+            <View style={isDesktopWeb ? styles.formGridItemFull : null}>
+              <LocationPickerField
+                label="Home location"
+                description="Preferred — this address is shown on your profile when set."
+                latitude={form.watch('homeLatitude')}
+                longitude={form.watch('homeLongitude')}
+                locationLabel={form.watch('homeLocationLabel')}
+                disabled={form.formState.isSubmitting}
+                onCoordinatesChange={(next) => {
+                  form.setValue('homeLatitude', next.latitude, { shouldValidate: true });
+                  form.setValue('homeLongitude', next.longitude, { shouldValidate: true });
+                  form.setValue('homeLocationLabel', next.label?.trim() ?? '', { shouldValidate: true });
+                }}
+                onClear={() => {
+                  form.setValue('homeLatitude', null, { shouldValidate: true });
+                  form.setValue('homeLongitude', null, { shouldValidate: true });
+                  form.setValue('homeLocationLabel', '', { shouldValidate: true });
+                }}
+              />
+            </View>
+          </View>
 
           {form.formState.errors.phone?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.phone.message}</Text> : null}
           {form.formState.errors.fullName?.message ? <Text className={`mb-2 ${text.error}`}>{form.formState.errors.fullName.message}</Text> : null}
@@ -383,3 +424,18 @@ export function UserProfileScreen() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  formGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -8,
+  },
+  formGridItem: {
+    paddingHorizontal: 8,
+  },
+  formGridItemFull: {
+    width: '100%',
+    paddingHorizontal: 8,
+  },
+});

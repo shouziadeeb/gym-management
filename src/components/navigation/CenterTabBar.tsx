@@ -1,5 +1,5 @@
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { Platform, Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View, useWindowDimensions } from 'react-native';
 
 import { useTheme } from '@/hooks/useTheme';
 import { systemBottomInset } from '@/lib/safe-area';
@@ -19,24 +19,51 @@ export function CenterTabBar({
   insets,
   scannerLabel = 'Scan',
 }: CenterTabBarProps) {
+  const { width } = useWindowDimensions();
   const { colors, isDark } = useTheme();
   const chromeColor = getBottomChromeColor(colors, isDark);
   const bottomInset = systemBottomInset(insets);
+  const isDesktopWeb = Platform.OS === 'web' && width >= 1024;
   const tabRowBottomPadding = Platform.OS === 'ios' ? 8 : 10;
+  const rowBottomPadding = isDesktopWeb ? 8 : tabRowBottomPadding;
+  const rowMaxWidth = isDesktopWeb ? 960 : undefined;
+  const scannerButtonSize = isDesktopWeb ? 52 : 56;
+  const scannerLift = isDesktopWeb ? -12 : -30;
+  const itemLabelSize = isDesktopWeb ? 11 : 8;
 
   return (
-    <View style={{ backgroundColor: chromeColor }}>
+    <View
+      style={{
+        backgroundColor: chromeColor,
+        paddingHorizontal: isDesktopWeb ? 20 : 0,
+        paddingBottom: isDesktopWeb ? 14 : 0,
+      }}
+    >
       <View
         style={{
           flexDirection: 'row',
           alignItems: 'flex-end',
           justifyContent: 'space-around',
-          paddingTop: 8,
-          paddingBottom: tabRowBottomPadding,
+          alignSelf: isDesktopWeb ? 'center' : 'stretch',
+          width: '100%',
+          maxWidth: rowMaxWidth,
+          paddingTop: isDesktopWeb ? 10 : 8,
+          paddingBottom: rowBottomPadding,
           paddingHorizontal: 8,
-        backgroundColor: colors.surface,
-        borderTopWidth: 0.3,
-        borderTopColor: colors.border,
+          backgroundColor: colors.surface,
+          borderTopWidth: 0.3,
+          borderTopColor: colors.border,
+          ...(isDesktopWeb
+            ? {
+                borderRadius: 18,
+                borderWidth: 1,
+                shadowColor: '#000',
+                shadowOpacity: 0.18,
+                shadowRadius: 14,
+                shadowOffset: { width: 0, height: 5 },
+                elevation: 8,
+              }
+            : null),
         }}
       >
         {state.routes.map((route, index) => {
@@ -89,15 +116,15 @@ export function CenterTabBar({
                 style={{
                   alignItems: 'center',
                   justifyContent: 'center',
-                  marginTop: -30,
+                  marginTop: scannerLift,
                   minWidth: 72,
                 }}
               >
                 <View
                   style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: 28,
+                    width: scannerButtonSize,
+                    height: scannerButtonSize,
+                    borderRadius: scannerButtonSize / 2,
                     alignItems: 'center',
                     justifyContent: 'center',
                     backgroundColor: colors.primary,
@@ -115,7 +142,7 @@ export function CenterTabBar({
                 <Text
                   style={{
                     marginTop: 4,
-                    fontSize: 11,
+                    fontSize: isDesktopWeb ? 12 : 11,
                     fontWeight: isFocused ? '700' : '500',
                     color: isFocused ? colors.tabActive : colors.tabInactive,
                   }}
@@ -138,15 +165,15 @@ export function CenterTabBar({
                 flex: 1,
                 alignItems: 'center',
                 justifyContent: 'center',
-                paddingVertical: 2,
-                minHeight: 48,
+                paddingVertical: isDesktopWeb ? 6 : 2,
+                minHeight: isDesktopWeb ? 54 : 48,
               }}
             >
               {icon}
               <Text
                 style={{
                   marginTop: 1,
-                  fontSize: 8,
+                  fontSize: itemLabelSize,
                   fontWeight: isFocused ? '600' : '500',
                   color: tint,
                 }}
@@ -159,7 +186,7 @@ export function CenterTabBar({
       </View>
 
       {/* Edge-to-edge Android: paint the gesture-nav region with the same chrome color. */}
-      <View style={{ height: bottomInset, backgroundColor: chromeColor }} />
+      <View style={{ height: isDesktopWeb ? 0 : bottomInset, backgroundColor: chromeColor }} />
     </View>
   );
 }

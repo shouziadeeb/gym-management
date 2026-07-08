@@ -3,7 +3,7 @@
  * Profile tab: Silent Coach–style layout with GYM OS theme colors (tabs unchanged).
  */
 import { router } from "expo-router";
-import { View } from "react-native";
+import { Platform, StyleSheet, View, useWindowDimensions } from "react-native";
 import { MapPin, Mail, Phone, User as UserIcon } from "lucide-react-native";
 
 import { AppOptionsMenu } from "@/components/layout/AppOptionsMenu";
@@ -27,6 +27,8 @@ import { useAppStore } from "@/store/app.store";
 import { useAuthStore } from "@/store/auth.store";
 
 export function ProfileHubScreen() {
+  const { width } = useWindowDimensions();
+  const isDesktopWeb = Platform.OS === "web" && width >= 1120;
   const session = useAuthStore((state) => state.session);
   const setAppMode = useAppStore((state) => state.setAppMode);
   const activeOwnerGymId = useAppStore((state) => state.activeOwnerGymId);
@@ -94,60 +96,124 @@ export function ProfileHubScreen() {
 
   return (
     <Screen scroll>
-      <ProfileHubHeader />
+      <View style={isDesktopWeb ? styles.desktopShell : null}>
+        <ProfileHubHeader />
 
-      {!isAuthenticated ? (
-        <>
-          <ProfileHeroSection
-            displayName="Guest"
-            avatarInitial="G"
-            profileComplete={false}
-          />
-          <ProfileGuestCard />
-        </>
-      ) : (
-        <>
-          <ProfileHeroSection
-            displayName={resolvedName}
-            avatarInitial={avatarInitial}
-            profileComplete={profileComplete}
-          />
-
-          <ProfileAccountCard
-            rows={accountRows}
-            profileComplete={profileComplete}
-            onCompleteProfile={
-              !profileComplete
-                ? () =>
-                    router.push(
-                      isEmailUser
-                        ? "/profile"
-                        : "/profile-setup?redirect=/(tabs)/profile-hub",
-                    )
-                : undefined
-            }
-          />
-
-          <OwnerGymProfileCard
-            ownedGyms={ownedGyms}
-            activeGym={activeGym}
-            activeOwnerGymId={activeOwnerGymId}
-            onSelectGym={setActiveOwnerGymId}
-          />
-
-          {ownedGyms.length === 0 && profileComplete ? (
-            <BecomeGymOwnerCard
-              onCreateGym={() => {
-                setAppMode("owner");
-                router.push("/create-gym");
-              }}
+        {!isAuthenticated ? (
+          <>
+            <ProfileHeroSection
+              displayName="Guest"
+              avatarInitial="G"
+              profileComplete={false}
             />
-          ) : null}
-        </>
-      )}
+            <ProfileGuestCard />
+          </>
+        ) : (
+          <>
+            <ProfileHeroSection
+              displayName={resolvedName}
+              avatarInitial={avatarInitial}
+              profileComplete={profileComplete}
+            />
 
-      <View style={{ height: 8 }} />
-      <AppOptionsMenu />
+            {isDesktopWeb ? (
+              <View style={styles.desktopCardsRow}>
+                <View style={styles.desktopPrimaryCol}>
+                  <ProfileAccountCard
+                    rows={accountRows}
+                    profileComplete={profileComplete}
+                    onCompleteProfile={
+                      !profileComplete
+                        ? () =>
+                            router.push(
+                              isEmailUser
+                                ? "/profile"
+                                : "/profile-setup?redirect=/(tabs)/profile-hub",
+                            )
+                        : undefined
+                    }
+                  />
+
+                  <OwnerGymProfileCard
+                    ownedGyms={ownedGyms}
+                    activeGym={activeGym}
+                    activeOwnerGymId={activeOwnerGymId}
+                    onSelectGym={setActiveOwnerGymId}
+                  />
+                </View>
+
+                {ownedGyms.length === 0 && profileComplete ? (
+                  <View style={styles.desktopSideCol}>
+                    <BecomeGymOwnerCard
+                      onCreateGym={() => {
+                        setAppMode("owner");
+                        router.push("/create-gym");
+                      }}
+                    />
+                  </View>
+                ) : null}
+              </View>
+            ) : (
+              <>
+                <ProfileAccountCard
+                  rows={accountRows}
+                  profileComplete={profileComplete}
+                  onCompleteProfile={
+                    !profileComplete
+                      ? () =>
+                          router.push(
+                            isEmailUser
+                              ? "/profile"
+                              : "/profile-setup?redirect=/(tabs)/profile-hub",
+                          )
+                      : undefined
+                  }
+                />
+
+                <OwnerGymProfileCard
+                  ownedGyms={ownedGyms}
+                  activeGym={activeGym}
+                  activeOwnerGymId={activeOwnerGymId}
+                  onSelectGym={setActiveOwnerGymId}
+                />
+
+                {ownedGyms.length === 0 && profileComplete ? (
+                  <BecomeGymOwnerCard
+                    onCreateGym={() => {
+                      setAppMode("owner");
+                      router.push("/create-gym");
+                    }}
+                  />
+                ) : null}
+              </>
+            )}
+          </>
+        )}
+
+        <View style={{ height: 8 }} />
+        <AppOptionsMenu />
+      </View>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  desktopShell: {
+    width: "100%",
+    maxWidth: 1120,
+    alignSelf: "center",
+  },
+  desktopCardsRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 16,
+  },
+  desktopPrimaryCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  desktopSideCol: {
+    width: 320,
+    minWidth: 300,
+  },
+});

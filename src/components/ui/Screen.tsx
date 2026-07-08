@@ -1,6 +1,6 @@
 import { useSegments } from 'expo-router';
 import { ReactNode } from 'react';
-import { RefreshControl, ScrollView, View, type ViewStyle } from 'react-native';
+import { RefreshControl, ScrollView, View, useWindowDimensions, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useScreenContentInsets } from '@/hooks/useScreenContentInsets';
@@ -34,12 +34,14 @@ export function Screen({
   transparentBackground = false,
 }: Props) {
   const segments = useSegments();
+  const { width } = useWindowDimensions();
   const { colors } = useTheme();
   const omitTopSafeArea = omitTopSafeAreaProp ?? shouldOmitTopSafeAreaForRoute(segments);
   const { topInset, bottomInset, contentTopGap } = useScreenContentInsets({ omitTopSafeArea });
   const backgroundColor = transparentBackground ? 'transparent' : colors.background;
   const horizontalPadding = screenLayout.screenPaddingX;
   const horizontalEdges = isWeb ? ([] as const) : (['left', 'right'] as const);
+  const useDesktopContentFrame = isWeb && width >= 1024;
 
   const shellStyle: ViewStyle = {
     flex: 1,
@@ -55,6 +57,12 @@ export function Screen({
     paddingBottom: scroll ? 0 : bottomInset,
     backgroundColor,
     ...webFullWidthStyle,
+    ...(useDesktopContentFrame
+      ? {
+          maxWidth: 1280,
+          alignSelf: 'center',
+        }
+      : null),
   };
 
   const scrollContentStyle: ViewStyle = {
